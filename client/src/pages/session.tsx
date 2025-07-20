@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
@@ -43,10 +44,37 @@ interface SessionLimitError {
 }
 
 export default function Session() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [sessionLimitError, setSessionLimitError] = useState<SessionLimitError | null>(null);
   const { toast } = useToast();
+
+  // Check if we have a sessionId in the URL to load existing results
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.split('?')[1]);
+    const sessionId = urlParams.get('sessionId');
+    
+    if (sessionId && !analysisResult) {
+      // Load the existing session analysis
+      fetchSessionAnalysis(sessionId);
+    }
+  }, [location]);
+
+  const fetchSessionAnalysis = async (sessionId: string) => {
+    try {
+      const response = await apiRequest(`/api/sessions/detail/${sessionId}`);
+      if (response) {
+        setAnalysisResult({
+          sessionId: parseInt(sessionId),
+          summary: response.summary,
+          detectedThoughts: response.detectedThoughts
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load session:', error);
+      // If session can't be loaded, continue with fresh form
+    }
+  };
 
   const form = useForm<JournalFormData>({
     resolver: zodResolver(journalFormSchema),
