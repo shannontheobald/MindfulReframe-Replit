@@ -243,14 +243,34 @@ User background (use this to personalize your approach):
 ` : '';
 
     const reframingMethods = {
-      'evidenceCheck': 'Evidence Examination - Look for facts that support or contradict this thought',
-      'alternativePerspectives': 'Alternative Perspectives - Consider other ways to view this situation',
-      'balancedThinking': 'Balanced Thinking - Find a more nuanced, realistic perspective',
-      'compassionateSelf': 'Self-Compassion - How would you speak to a good friend in this situation?',
-      'actionOriented': 'Action Focus - What can you actually control or influence here?'
+      'evidenceCheck': {
+        name: 'Evidence Examination',
+        focus: 'Look for facts that support or contradict this thought',
+        guidance: 'Guide them to examine concrete evidence, ask for specific examples, and help them distinguish between facts and interpretations.'
+      },
+      'alternativePerspectives': {
+        name: 'Alternative Perspectives',
+        focus: 'Consider other ways to view this situation', 
+        guidance: 'Help them explore different viewpoints, consider how others might see it, and find multiple explanations for the same situation.'
+      },
+      'balancedThinking': {
+        name: 'Balanced Thinking',
+        focus: 'Find a more nuanced, realistic perspective',
+        guidance: 'Guide them away from extremes toward middle ground, help them see both positives and negatives, and find realistic assessments.'
+      },
+      'compassionateSelf': {
+        name: 'Self-Compassion',
+        focus: 'How would you speak to a good friend in this situation?',
+        guidance: 'Encourage self-kindness, help them treat themselves as they would a friend, and reduce harsh self-criticism.'
+      },
+      'actionOriented': {
+        name: 'Action Focus', 
+        focus: 'What can you actually control or influence here?',
+        guidance: 'Focus on actionable steps, help distinguish between what they can and cannot control, and encourage problem-solving.'
+      }
     };
 
-    const methodDescription = reframingMethods[reframingMethod as keyof typeof reframingMethods] || reframingMethods.evidenceCheck;
+    const methodInfo = reframingMethods[reframingMethod as keyof typeof reframingMethods] || reframingMethods.evidenceCheck;
 
     // Build conversation history for context
     const conversationContext = chatHistory.length > 0 
@@ -262,7 +282,8 @@ User background (use this to personalize your approach):
 You are guiding a user through reframing this negative thought: "${selectedThought}"
 This thought shows signs of: ${distortionType}
 
-Current reframing method: ${methodDescription}
+Current reframing method: ${methodInfo.name} - ${methodInfo.focus}
+Method guidance: ${methodInfo.guidance}
 
 ${contextPrompt}
 

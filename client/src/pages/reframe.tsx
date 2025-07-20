@@ -43,6 +43,59 @@ interface ChatResponse {
   nextSuggestion?: string;
 }
 
+// Method-specific starter prompts component
+const MethodStarterPrompt = ({ method, thought }: { method: string; thought: string }) => {
+  const prompts = {
+    evidenceCheck: {
+      title: "Evidence Check",
+      prompt: `Let's examine the evidence for this thought: "${thought.substring(0, 80)}${thought.length > 80 ? '...' : ''}"
+      
+What specific facts or experiences support this thought? What evidence might contradict it?`
+    },
+    alternativePerspectives: {
+      title: "Alternative Perspectives", 
+      prompt: `Let's explore different ways to view this thought: "${thought.substring(0, 80)}${thought.length > 80 ? '...' : ''}"
+      
+How might someone else see this situation? What are other possible explanations?`
+    },
+    balancedThinking: {
+      title: "Balanced Thinking",
+      prompt: `Let's find a more balanced view of this thought: "${thought.substring(0, 80)}${thought.length > 80 ? '...' : ''}"
+      
+What's both realistic and hopeful about this situation? Where's the middle ground?`
+    },
+    compassionateSelf: {
+      title: "Self-Compassion",
+      prompt: `Let's approach this thought with kindness: "${thought.substring(0, 80)}${thought.length > 80 ? '...' : ''}"
+      
+What would you tell a dear friend who shared this exact worry? How can you show yourself the same compassion?`
+    },
+    actionOriented: {
+      title: "Action Focus",
+      prompt: `Let's focus on what you can control about this thought: "${thought.substring(0, 80)}${thought.length > 80 ? '...' : ''}"
+      
+What specific actions could you take? What parts of this situation are within your influence?`
+    }
+  };
+
+  const methodPrompt = prompts[method as keyof typeof prompts] || prompts.evidenceCheck;
+
+  return (
+    <div className="text-left max-w-2xl mx-auto">
+      <div className="bg-gradient-to-r from-primary/10 to-secondary/10 p-4 rounded-lg border border-primary/20">
+        <h4 className="font-semibold text-primary mb-2 flex items-center">
+          <Sparkles className="w-4 h-4 mr-2" />
+          {methodPrompt.title} Approach
+        </h4>
+        <p className="text-charcoal whitespace-pre-line">{methodPrompt.prompt}</p>
+      </div>
+      <p className="text-warm-gray text-sm mt-3 text-center">
+        Share your initial thoughts to get started with this reframing approach.
+      </p>
+    </div>
+  );
+};
+
 export default function Reframe() {
   const [, setLocation] = useLocation();
   const [reframingSessionId, setReframingSessionId] = useState<number | null>(null);
@@ -321,9 +374,10 @@ export default function Reframe() {
                   <div className="space-y-4">
                     {session.chatHistory?.length === 0 && (
                       <div className="text-center py-8">
-                        <p className="text-warm-gray">
-                          Let's start reframing this thought. What's your first reaction when you examine it more closely?
-                        </p>
+                        <MethodStarterPrompt 
+                          method={session.reframingMethod} 
+                          thought={session.selectedThought}
+                        />
                       </div>
                     )}
                     
