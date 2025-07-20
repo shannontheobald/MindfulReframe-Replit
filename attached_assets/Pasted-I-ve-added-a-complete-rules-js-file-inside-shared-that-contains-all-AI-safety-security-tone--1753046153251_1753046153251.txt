@@ -1,0 +1,46 @@
+I’ve added a complete `rules.js` file inside `shared/` that contains all AI safety, security, tone, scaling, and session logic for the Mindful Reframe journaling app.
+
+Please do the following:
+
+---
+
+🔁 **1. Retroactively update all existing code** you’ve written to apply the rules where applicable:
+
+🧠 GPT Logic:
+- Import the rules file: `import { RULES } from '../shared/rules.js'`
+- Add a check: Only allow GPT calls where the task is listed in `RULES.ai.useCases.allow`
+- Apply `RULES.assistantPersona.voice` and `RULES.ai.tone.style` to the system prompt for GPT
+- Use `RULES.ai.efficiency.maxTokens` to set the max token count for requests
+- If the task is a summarization, use GPT-3.5 instead of GPT-4o per `RULES.ai.efficiency.fallbackToGPT3p5ForSummaries`
+- Add a daily user token budget check (`RULES.ai.efficiency.dailyTokenBudgetPerUser`)
+- Sanitize journal inputs and block known jailbreak phrases using `RULES.ai.promptSafety`
+
+🔐 Supabase Session Access:
+- Add checks to restrict session queries to the logged-in user using:
+  `eq('user_id', user.id)` or your preferred method
+- Comment or enforce `RULES.security.db.enableRLS`
+- Apply session cap logic from `RULES.scaling.sessionStorage.maxSavedSessionsPerUser`
+- If user has hit the limit, follow: `RULES.scaling.sessionStorage.onSessionCapReached` logic — prompt to delete or upgrade
+- Allow session export before deletion if `RULES.scaling.sessionStorage.allowExportBeforeDeletion === true`
+
+---
+
+🆕 **2. Going forward, use the rules file as a source of truth** for:
+- Tone and safety in GPT prompt design
+- Rate limits and token control
+- Access control in Supabase queries
+- Which features are gated behind `RULES.featureFlags`
+- Storage duration, compression, or summarization logic in journaling data
+- What error messages or fallback behaviors should trigger on limit breach
+
+---
+
+💡 Optional enhancements:
+If useful, create helper functions like:
+- `isAllowedAIUseCase(taskName)`
+- `getAssistantTonePrompt()`
+- `hasReachedSessionLimit(userId)`
+- `shouldBlockPromptInjection(input)`
+- `isCrisisText(input)`
+
+Thank you! Please start with the GPT files and journaling flow logic first.

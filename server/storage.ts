@@ -3,6 +3,7 @@ import { neon } from "@neondatabase/serverless";
 import { users, intakeResponses, journalSessions, type User, type InsertUser, type IntakeResponse, type InsertIntakeResponse, type JournalSession, type InsertJournalSession } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { checkDatabaseConnection } from "./database-status";
+import { RULES } from "../shared/rules";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -74,7 +75,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getJournalSessionsByUserId(userId: number): Promise<JournalSession[]> {
-    const result = await db.select().from(journalSessions).where(eq(journalSessions.userId, userId)).orderBy(journalSessions.createdAt);
+    // Apply RLS-style filtering - restrict to user's own sessions only
+    const result = await db.select().from(journalSessions)
+      .where(eq(journalSessions.userId, userId))
+      .orderBy(journalSessions.createdAt);
     return result;
   }
 
@@ -155,6 +159,7 @@ export class MemStorage implements IStorage {
   }
 
   async getJournalSessionsByUserId(userId: number): Promise<JournalSession[]> {
+    // Apply session isolation - restrict to user's own sessions only
     return Array.from(this.journalSessions.values())
       .filter((session) => session.userId === userId)
       .sort((a, b) => (a.createdAt?.getTime() || 0) - (b.createdAt?.getTime() || 0));

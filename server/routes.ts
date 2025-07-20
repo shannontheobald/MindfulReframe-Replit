@@ -5,6 +5,13 @@ import { insertIntakeResponseSchema, insertJournalSessionSchema } from "@shared/
 import { z } from "zod";
 import { getDatabaseStatus } from "./database-status";
 import { analyzeJournalEntry } from "./openai-service";
+import { RULES } from "../shared/rules";
+import { 
+  validateJournalEntry, 
+  hasReachedSessionLimit, 
+  getSessionCapBehavior,
+  hasReachedDailyTokenLimit 
+} from "../shared/rule-helpers";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Database status endpoint
@@ -64,6 +71,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
 
+      // Validate journal entry against rules
+      const validation = validateJournalEntry(journalEntry);
+      if (!validation.isValid) {
+        res.status(400).json({ message: validation.errors.join(", ") });
+        return;
+      }
+
+      // Check session limits if user is provided
+      if (userId) {
+        const existingSessions = await storage.getJournalSessionsByUserId(userId);
+        if (hasReachedSessionLimit(existingSessions.length)) {
+          const behavior = getSessionCapBehavior();
+          res.status(429).json({ 
+            message: "Session limit reached. Please delete some sessions or upgrade your account.",
+            sessionCount: existingSessions.length,
+            maxSessions: RULES.STORAGE.SESSION_MANAGEMENT.maxSavedSessionsPerUser,
+            canExport: behavior.allowExport
+          });
+          return;
+        }
+      }
+
       // Get user context from intake if available
       let userContext = undefined;
       if (userId) {
@@ -79,8 +108,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Check daily token usage (mock implementation for now - would need actual tracking)
+      const userTokensUsedToday = 0; // TODO: Implement actual token tracking per user
+      
       // Analyze with OpenAI
-      const analysis = await analyzeJournalEntry(journalEntry, userContext);
+      const analysis = await analyzeJournalEntry(journalEntry, userContext, userTokensUsedToday);
 
       // Create session record
       const sessionData = insertJournalSessionSchema.parse({

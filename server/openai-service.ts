@@ -1,4 +1,15 @@
 import OpenAI from "openai";
+import { RULES } from "../shared/rules";
+import { 
+  isAllowedAIUseCase, 
+  getAssistantTonePrompt, 
+  getMaxTokensForOperation,
+  getModelForTask,
+  isCrisisText,
+  shouldBlockPromptInjection,
+  sanitizeUserInput,
+  getCrisisResponse
+} from "../shared/rule-helpers";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({
@@ -24,10 +35,42 @@ export async function analyzeJournalEntry(
     question3?: string;
     question4?: string;
     question5?: string;
-  }
+  },
+  userTokensUsedToday: number = 0
 ): Promise<JournalAnalysis> {
+  // Check if operation is allowed by rules
+  if (!isAllowedAIUseCase('detectCognitiveDistortions')) {
+    throw new Error("Cognitive distortion detection is not currently allowed");
+  }
+
   if (!process.env.OPENAI_API_KEY) {
     throw new Error("OpenAI API key not configured");
+  }
+
+  // Check daily token limit
+  const dailyLimit = RULES.COST_CONTROLS.TOKEN_LIMITS.dailyTokenCapPerUser;
+  if (userTokensUsedToday >= dailyLimit) {
+    throw new Error("Daily AI usage limit reached. Please try again tomorrow.");
+  }
+
+  // Sanitize and validate input
+  const sanitizedEntry = sanitizeUserInput(journalEntry);
+  
+  // Check for crisis indicators
+  if (isCrisisText(sanitizedEntry)) {
+    return {
+      summary: getCrisisResponse(),
+      detectedThoughts: [{
+        thought: "Crisis support needed",
+        distortion: "Crisis Support",
+        explanation: "Please reach out for professional support."
+      }]
+    };
+  }
+
+  // Check for prompt injection attempts
+  if (shouldBlockPromptInjection(sanitizedEntry)) {
+    throw new Error("Invalid input detected. Please rephrase your journal entry.");
   }
 
   const contextPrompt = userContext
@@ -42,10 +85,15 @@ Context about the user from their intake:
 `
     : "";
 
-  const prompt = `${contextPrompt}You are a compassionate AI therapist specializing in Cognitive Behavioral Therapy. Analyze the following journal entry and identify negative thought patterns and cognitive distortions.
+  // Get assistant tone and persona from rules
+  const assistantTonePrompt = getAssistantTonePrompt();
+
+  const prompt = `${contextPrompt}${assistantTonePrompt}
+
+Analyze the following journal entry and identify negative thought patterns and cognitive distortions.
 
 Journal Entry:
-"${journalEntry}"
+"${sanitizedEntry}"
 
 Please respond with JSON in this exact format:
 {
@@ -78,12 +126,16 @@ Guidelines:
 - If no clear distortions exist, identify subtler patterns of negative thinking`;
 
   try {
+    // Get model and token limits from rules
+    const model = getModelForTask('detectCognitiveDistortions');
+    const maxTokens = getMaxTokensForOperation('detectCognitiveDistortions');
+
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: model,
       messages: [
         {
           role: "system",
-          content: "You are a compassionate CBT therapist. Respond only with valid JSON."
+          content: "You are Reframe, a compassionate AI assistant. Respond only with valid JSON following the exact format requested."
         },
         {
           role: "user",
@@ -92,7 +144,7 @@ Guidelines:
       ],
       response_format: { type: "json_object" },
       temperature: 0.7,
-      max_tokens: 1500,
+      max_tokens: maxTokens,
     });
 
     const content = response.choices[0].message.content;

@@ -9,12 +9,15 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Brain, Lightbulb, Loader2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ArrowLeft, Brain, Lightbulb, Loader2, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
 const journalFormSchema = z.object({
-  journalEntry: z.string().min(10, "Please write at least 10 characters to get meaningful analysis"),
+  journalEntry: z.string()
+    .min(10, "Please write at least 10 characters to get meaningful analysis")
+    .max(5000, "Journal entry cannot exceed 5000 characters"),
   userId: z.number().optional(),
 });
 
@@ -32,9 +35,17 @@ interface AnalysisResult {
   detectedThoughts: DetectedThought[];
 }
 
+interface SessionLimitError {
+  message: string;
+  sessionCount: number;
+  maxSessions: number;
+  canExport: boolean;
+}
+
 export default function Session() {
   const [, setLocation] = useLocation();
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [sessionLimitError, setSessionLimitError] = useState<SessionLimitError | null>(null);
   const { toast } = useToast();
 
   const form = useForm<JournalFormData>({
@@ -57,13 +68,39 @@ export default function Session() {
         description: "I've identified some thought patterns we can work on together.",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error("Analysis error:", error);
-      toast({
-        title: "Analysis Failed",
-        description: "I had trouble analyzing your entry. Please try again or check if the AI service is available.",
-        variant: "destructive",
-      });
+      
+      // Check if it's a session limit error
+      if (error.status === 429) {
+        error.json().then((errorData: SessionLimitError) => {
+          setSessionLimitError(errorData);
+        }).catch(() => {
+          toast({
+            title: "Session Limit Reached",
+            description: "You've reached your session limit. Please delete some sessions to continue.",
+            variant: "destructive",
+          });
+        });
+      } else if (error.message?.includes("Daily AI usage limit reached")) {
+        toast({
+          title: "Daily Limit Reached",
+          description: "You've reached your daily AI usage limit. Please try again tomorrow.",
+          variant: "destructive",
+        });
+      } else if (error.message?.includes("Crisis support needed")) {
+        // Handle crisis detection gracefully
+        toast({
+          title: "Support Resources Available",
+          description: "I've detected you might need additional support. Please consider reaching out to a professional.",
+        });
+      } else {
+        toast({
+          title: "Analysis Failed", 
+          description: "I had trouble analyzing your entry. Please try again or check if the AI service is available.",
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -79,6 +116,79 @@ export default function Session() {
     });
   };
 
+  const handleDeleteSessions = () => {
+    // TODO: Implement session deletion functionality
+    toast({
+      title: "Coming Soon",
+      description: "Session management features will be available soon.",
+    });
+  };
+
+  // Show session limit error if applicable
+  if (sessionLimitError) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        {/* Header */}
+        <div className="w-full px-6 py-4 glass-effect">
+          <div className="max-w-4xl mx-auto flex items-center justify-between">
+            <Button
+              variant="ghost"
+              onClick={() => setLocation("/")}
+              className="flex items-center space-x-2 text-warm-gray hover:text-charcoal"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span>Back</span>
+            </Button>
+            <h2 className="text-xl font-semibold text-charcoal">Session Limit Reached</h2>
+          </div>
+        </div>
+
+        {/* Session Limit Alert */}
+        <main className="flex-1 flex items-center justify-center px-6 py-12">
+          <div className="max-w-2xl mx-auto w-full">
+            <Card className="glass-effect shadow-xl">
+              <CardContent className="p-8 md:p-12">
+                <Alert className="mb-6">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    You've reached your session limit of {sessionLimitError.maxSessions} saved sessions.
+                    You currently have {sessionLimitError.sessionCount} sessions.
+                  </AlertDescription>
+                </Alert>
+
+                <div className="text-center space-y-6">
+                  <h2 className="text-2xl md:text-3xl font-bold text-charcoal">
+                    Session Storage Full
+                  </h2>
+                  <p className="text-warm-gray text-lg leading-relaxed">
+                    To continue journaling, you'll need to delete some previous sessions or upgrade your account.
+                    {sessionLimitError.canExport && " You can export your sessions before deleting them."}
+                  </p>
+
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    <Button
+                      onClick={handleDeleteSessions}
+                      className="px-8 py-3 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-full hover:shadow-lg hover:scale-105 transition-all duration-200"
+                    >
+                      Manage Sessions
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setLocation("/")}
+                      className="px-8 py-3 glass-effect text-charcoal font-semibold rounded-full hover:bg-white hover:shadow-md transition-all duration-200"
+                    >
+                      Return Home
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   if (analysisResult) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -89,6 +199,7 @@ export default function Session() {
               variant="ghost"
               onClick={() => {
                 setAnalysisResult(null);
+                setSessionLimitError(null);
                 form.reset();
               }}
               className="flex items-center space-x-2 text-warm-gray hover:text-charcoal"
