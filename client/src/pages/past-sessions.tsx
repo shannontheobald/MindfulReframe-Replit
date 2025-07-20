@@ -34,7 +34,7 @@ export default function PastSessions() {
               <p className="text-warm-gray text-lg mb-8">
                 Your reframing journey starts with your first session. Ready to begin transforming your thoughts?
               </p>
-              <Link href="/intake">
+              <Link href="/session">
                 <Button className="px-8 py-3 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-full hover:shadow-lg hover:scale-105 transition-all duration-200">
                   Start Your First Session
                 </Button>

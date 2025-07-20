@@ -19,6 +19,15 @@ export const intakeResponses = pgTable("intake_responses", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const journalSessions = pgTable("journal_sessions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  journalEntry: text("journal_entry").notNull(),
+  detectedThoughts: text("detected_thoughts").array().notNull(),
+  cognitiveDistortions: text("cognitive_distortions").array().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -29,7 +38,14 @@ export const insertIntakeResponseSchema = createInsertSchema(intakeResponses).om
   createdAt: true,
 });
 
+export const insertJournalSessionSchema = createInsertSchema(journalSessions).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type IntakeResponse = typeof intakeResponses.$inferSelect;
 export type InsertIntakeResponse = z.infer<typeof insertIntakeResponseSchema>;
+export type JournalSession = typeof journalSessions.$inferSelect;
+export type InsertJournalSession = z.infer<typeof insertJournalSessionSchema>;

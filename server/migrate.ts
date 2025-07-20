@@ -34,6 +34,18 @@ export async function ensureTables() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `;
+
+    // Create journal_sessions table
+    await sql`
+      CREATE TABLE IF NOT EXISTS journal_sessions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        journal_entry TEXT NOT NULL,
+        detected_thoughts TEXT[] NOT NULL,
+        cognitive_distortions TEXT[] NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
     
     console.log("Database tables ensured successfully");
   } catch (error) {
