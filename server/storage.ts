@@ -1,4 +1,7 @@
+import { drizzle } from "drizzle-orm/neon-serverless";
+import { neon } from "@neondatabase/serverless";
 import { users, intakeResponses, type User, type InsertUser, type IntakeResponse, type InsertIntakeResponse } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -6,6 +9,62 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   createIntakeResponse(response: InsertIntakeResponse): Promise<IntakeResponse>;
   getIntakeResponseByUserId(userId: number): Promise<IntakeResponse | undefined>;
+}
+
+// Initialize database connection if DATABASE_URL exists, otherwise use in-memory storage
+let db: any = null;
+let dbAvailable = false;
+
+async function initializeDatabase() {
+  if (!process.env.DATABASE_URL) {
+    console.log("No DATABASE_URL provided, using in-memory storage");
+    return false;
+  }
+
+  try {
+    const sql = neon(process.env.DATABASE_URL);
+    db = drizzle(sql);
+    
+    // Test the connection
+    await sql`SELECT 1`;
+    dbAvailable = true;
+    console.log("Database connection established successfully");
+    return true;
+  } catch (error) {
+    console.warn("Database connection failed, using in-memory storage:", error.message);
+    dbAvailable = false;
+    return false;
+  }
+}
+
+// Initialize database connection
+initializeDatabase();
+
+export class DatabaseStorage implements IStorage {
+  async getUser(id: number): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.username, username)).limit(1);
+    return result[0];
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const result = await db.insert(users).values(insertUser).returning();
+    return result[0];
+  }
+
+  async createIntakeResponse(insertResponse: InsertIntakeResponse): Promise<IntakeResponse> {
+    const result = await db.insert(intakeResponses).values(insertResponse).returning();
+    return result[0];
+  }
+
+  async getIntakeResponseByUserId(userId: number): Promise<IntakeResponse | undefined> {
+    const result = await db.select().from(intakeResponses).where(eq(intakeResponses.userId, userId)).limit(1);
+    return result[0];
+  }
 }
 
 export class MemStorage implements IStorage {
@@ -61,4 +120,30 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Create a dynamic storage that checks database availability
+class DynamicStorage implements IStorage {
+  private memStorage = new MemStorage();
+  private dbStorage = new DatabaseStorage();
+
+  async getUser(id: number): Promise<User | undefined> {
+    return dbAvailable ? this.dbStorage.getUser(id) : this.memStorage.getUser(id);
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    return dbAvailable ? this.dbStorage.getUserByUsername(username) : this.memStorage.getUserByUsername(username);
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    return dbAvailable ? this.dbStorage.createUser(user) : this.memStorage.createUser(user);
+  }
+
+  async createIntakeResponse(response: InsertIntakeResponse): Promise<IntakeResponse> {
+    return dbAvailable ? this.dbStorage.createIntakeResponse(response) : this.memStorage.createIntakeResponse(response);
+  }
+
+  async getIntakeResponseByUserId(userId: number): Promise<IntakeResponse | undefined> {
+    return dbAvailable ? this.dbStorage.getIntakeResponseByUserId(userId) : this.memStorage.getIntakeResponseByUserId(userId);
+  }
+}
+
+export const storage = new DynamicStorage();
