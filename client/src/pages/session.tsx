@@ -58,8 +58,10 @@ export default function Session() {
 
   const analyzeMutation = useMutation({
     mutationFn: async (data: JournalFormData) => {
-      const response = await apiRequest("POST", "/api/sessions/analyze", data);
-      return response.json() as Promise<AnalysisResult>;
+      return apiRequest("/api/sessions/analyze", {
+        method: "POST",
+        body: data
+      });
     },
     onSuccess: (result) => {
       setAnalysisResult(result);
