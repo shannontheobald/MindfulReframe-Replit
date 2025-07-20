@@ -1,0 +1,117 @@
+Please create a new file called `rules.js` inside my `shared/` folder.
+
+This file should export a `RULES` object that defines core behavior for my Mindful Reframe app — a journaling and CBT-based AI assistant. Ensure it's a Replit-compatible JavaScript ES module and supports AI safety, security, user experience, and scaling.
+
+Include these detailed sections:
+
+---
+
+1. 🔐 SECURITY
+- Prevent console logging of user journal entries
+- Require login for all session activity
+- Restrict session access to only the authenticated user
+- Enable Supabase RLS (Row-Level Security)
+- Include token expiration rules (24hr access)
+
+---
+
+2. 🤖 AI USAGE & TONE
+- Allow GPT use cases:
+  - Detect cognitive distortions
+  - Summarize journal entries
+  - Guide user through reframing
+  - Generate personalized visualization prompts
+- Deny:
+  - Clinical advice
+  - Medical diagnosis
+  - Open-ended chat not tied to journaling
+- GPT tone:
+  - Supportive, curious, warm “big sister energy”
+  - Use metaphor and affirming questions
+  - Avoid advice-giving
+- Prohibited phrases:
+  - "Just get over it"
+  - "You're irrational"
+  - "You should just…"
+- Include soft crisis detection: if user types things like “I want to die,” respond with:
+  > "I’m really sorry you’re feeling this way. You are not alone. Please reach out to a professional or visit https://findahelpline.com to find a support service in your region."
+- Add prompt injection safety:
+  - Sanitize user inputs
+  - Block jailbreak phrases like “Ignore previous instructions” or “Pretend to be a therapist”
+
+---
+
+3. 💸 AI COST CONTROLS
+- Use GPT-4 only when necessary
+- Fallback to GPT-3.5 for lightweight summarization
+- Max 600 tokens per request
+- Set user-level daily token cap: 20,000 tokens/day
+
+---
+
+4. 🚦 RATE LIMITS & ABUSE PREVENTION
+- Limit to:
+  - 5 GPT calls/minute
+  - 3 journal entries/hour
+  - 5 reframe sessions/day
+- Apply IP throttling as a backup
+
+---
+
+5. 🎭 ASSISTANT PERSONA
+- Name: Reframe
+- Voice: Compassionate, curious, growth-oriented
+- Behavior:
+  - Ask reflective questions
+  - Never give directive advice
+  - Gently guide user through reframing
+
+---
+
+6. 📈 SCALING / SESSION STORAGE
+- Store only essential metadata by default (e.g. belief summary, distress score)
+- Allow user to “flag” sessions for full journal storage (optional)
+- Auto-delete unflagged full-text sessions after 30 days
+- Cap storage at **20 saved sessions per user**
+- When session cap is reached: **Prompt user to delete or upgrade**
+- Allow optional session export/download before deletion
+- Use lazy loading for past sessions to reduce frontend load
+- Allow visualization generation only for paid users
+
+---
+
+7. 🧠 SESSION MEMORY & CROSS-SESSION LOGIC
+- Isolate GPT memory by session
+- Allow referencing past reframes only if opted in
+- Limit session memory context to 30 days
+
+---
+
+8. 📜 AUDIT TRAIL
+- Enable GPT prompt/response logging (no PII)
+- Keep logs for 30 days
+- Avoid storing full journal content in audit history
+
+---
+
+9. ✅ FEATURE FLAGS
+- Add toggles like:
+  - `enableNewReframeTool: false`
+  - `betaVisualizationStyleV2: false`
+  - `useCachingOnDistortionDetection: true`
+- Let features be overridden per environment (dev vs prod)
+
+---
+
+10. 🌍 DATA COMPLIANCE
+- Allow user to:
+  - Export all data
+  - Request deletion of all data
+- Indicate data is stored in US region
+- Automatically delete inactive accounts after 365 days
+
+---
+
+Please return a fully commented `rules.js` file, ready to import as:
+```js
+import { RULES } from '../shared/rules.js'
