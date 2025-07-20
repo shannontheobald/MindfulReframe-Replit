@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { ensureTables } from "./migrate";
+import { checkDatabaseConnection } from "./database-status";
 
 const app = express();
 app.use(express.json());
@@ -38,8 +39,11 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Ensure database tables exist before starting server
-  await ensureTables();
+  // Check database connection and ensure tables exist
+  const dbStatus = await checkDatabaseConnection();
+  if (dbStatus.connected) {
+    await ensureTables();
+  }
   
   const server = await registerRoutes(app);
 

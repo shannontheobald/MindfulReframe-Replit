@@ -2,6 +2,7 @@ import { drizzle } from "drizzle-orm/neon-serverless";
 import { neon } from "@neondatabase/serverless";
 import { users, intakeResponses, type User, type InsertUser, type IntakeResponse, type InsertIntakeResponse } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import { checkDatabaseConnection } from "./database-status";
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
@@ -16,25 +17,23 @@ let db: any = null;
 let dbAvailable = false;
 
 async function initializeDatabase() {
-  if (!process.env.DATABASE_URL) {
-    console.log("No DATABASE_URL provided, using in-memory storage");
-    return false;
+  const status = await checkDatabaseConnection();
+  
+  if (status.connected && process.env.DATABASE_URL) {
+    try {
+      const sql = neon(process.env.DATABASE_URL);
+      db = drizzle(sql);
+      dbAvailable = true;
+      return true;
+    } catch (error) {
+      console.warn("Failed to initialize Drizzle ORM:", error);
+      dbAvailable = false;
+      return false;
+    }
   }
-
-  try {
-    const sql = neon(process.env.DATABASE_URL);
-    db = drizzle(sql);
-    
-    // Test the connection
-    await sql`SELECT 1`;
-    dbAvailable = true;
-    console.log("Database connection established successfully");
-    return true;
-  } catch (error) {
-    console.warn("Database connection failed, using in-memory storage:", error.message);
-    dbAvailable = false;
-    return false;
-  }
+  
+  dbAvailable = false;
+  return false;
 }
 
 // Initialize database connection

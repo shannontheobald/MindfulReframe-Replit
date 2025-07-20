@@ -3,8 +3,17 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertIntakeResponseSchema } from "@shared/schema";
 import { z } from "zod";
+import { getDatabaseStatus } from "./database-status";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Database status endpoint
+  app.get("/api/status", (req, res) => {
+    const status = getDatabaseStatus();
+    res.json({
+      server: "running",
+      database: status
+    });
+  });
   // Create intake response
   app.post("/api/intake", async (req, res) => {
     try {
