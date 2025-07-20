@@ -141,12 +141,7 @@ export default function Reframe() {
     }
   });
 
-  // Auto-start session when component mounts
-  useEffect(() => {
-    if (sessionId && thought && distortion && !reframingSessionId) {
-      startSessionMutation.mutate();
-    }
-  }, [sessionId, thought, distortion]);
+  // Don't auto-start session - let user choose method first
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -252,9 +247,12 @@ export default function Reframe() {
                   <Sparkles className="w-5 h-5 text-secondary" />
                   <span>Choose Your Reframing Method</span>
                 </CardTitle>
+                <p className="text-sm text-warm-gray mt-2">
+                  Select the approach that feels most helpful for examining this thought:
+                </p>
               </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 gap-3">
                   {Object.entries(reframingMethods).map(([key, method]) => (
                     <button
                       key={key}
@@ -274,6 +272,23 @@ export default function Reframe() {
                       </div>
                     </button>
                   ))}
+                </div>
+                
+                <div className="pt-4 flex justify-center">
+                  <Button
+                    onClick={() => startSessionMutation.mutate()}
+                    disabled={startSessionMutation.isPending}
+                    className="px-8 py-3 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-full hover:shadow-lg hover:scale-105 transition-all duration-200"
+                  >
+                    {startSessionMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        Starting Session...
+                      </>
+                    ) : (
+                      <>Start Reframing with {reframingMethods[reframingMethod as keyof typeof reframingMethods]?.name}</>
+                    )}
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -394,15 +409,7 @@ export default function Reframe() {
             </Card>
           )}
 
-          {/* Loading State */}
-          {startSessionMutation.isPending && (
-            <Card className="glass-effect shadow-lg">
-              <CardContent className="p-8 text-center">
-                <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
-                <p className="text-warm-gray">Starting your reframing session...</p>
-              </CardContent>
-            </Card>
-          )}
+
         </div>
       </main>
     </div>
