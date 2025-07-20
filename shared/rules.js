@@ -349,11 +349,12 @@ export const RULES = {
         'debuggingCriticalIssues',
         'securityVulnerabilityFixes',
         'performanceOptimizations',
-        'userRequestedFeatures'
+        'userRequestedFeatures',
+        'userRequestedStylingChanges'
       ],
       
       prohibitChangesFor: [
-        'stylingTweaks',
+        'unsolicited StylingTweaks',
         'minorRefactoring',
         'unnecessaryOptimizations',
         'cosmetic improvements',
