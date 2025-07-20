@@ -4,7 +4,7 @@
 
 This is a full-stack web application called "Mindful Reframe" that helps users transform limiting beliefs into empowering thoughts through guided reflection and visualization. The application consists of a React frontend with shadcn/ui components and an Express.js backend with PostgreSQL database using Drizzle ORM.
 
-**Current Status:** Phase 1 & 2 Complete - Homepage, Intake Form, and AI-Powered Journal Analysis
+**Current Status:** Phase 1, 2 & 3 Complete - Homepage, Intake Form, Journal Analysis, and Interactive Reframing Chatbot
 
 ## User Preferences
 
@@ -33,6 +33,7 @@ Preferred communication style: Simple, everyday language.
 - **Users Table**: Stores user authentication data (id, username, password)
 - **Intake Responses Table**: Stores user's responses to 5 intake questions with timestamps
 - **Journal Sessions Table**: Stores journal entries with AI-detected thoughts and cognitive distortions
+- **Reframing Sessions Table**: Stores interactive chat sessions for guided thought reframing
 
 ### API Endpoints
 - `POST /api/intake` - Create new intake response
@@ -40,12 +41,16 @@ Preferred communication style: Simple, everyday language.
 - `POST /api/sessions/analyze` - Analyze journal entry with OpenAI and create session
 - `GET /api/sessions/:userId` - Get all journal sessions for user
 - `GET /api/sessions/detail/:sessionId` - Get specific journal session details
+- `POST /api/reframing/start` - Start new interactive reframing session
+- `POST /api/reframing/:sessionId/chat` - Send message in reframing chat
+- `GET /api/reframing/:sessionId` - Get reframing session details and chat history
 - `GET /api/status` - Check server and database status
 
 ### Frontend Pages
 - **Home Page**: Landing page with hero section and navigation to session/past sessions
 - **Intake Page**: Multi-step form for collecting user responses to 5 questions
 - **Session Page**: Journal entry form with AI-powered thought analysis and distortion detection
+- **Reframe Page**: Interactive chat interface for guided CBT reframing with method selection
 - **Past Sessions Page**: Placeholder for viewing previous sessions
 - **404 Page**: Error page for unmatched routes
 
@@ -71,6 +76,16 @@ Preferred communication style: Simple, everyday language.
 5. System extracts 2-4 negative thoughts and labels cognitive distortions
 6. Results displayed with explanations and options to select thoughts for reframing
 7. Session saved to database for future reference
+
+### Phase 3: Interactive Reframing Flow
+1. User selects a negative thought from journal analysis results
+2. User chooses reframing method (Evidence Check, Alternative Perspectives, etc.)
+3. System creates reframing session via `/api/reframing/start` endpoint
+4. Interactive chat interface guides user through CBT reframing process
+5. AI asks thoughtful questions to help user examine their thought patterns
+6. Conversation continues until user develops a balanced, realistic perspective
+7. Final reframed thought is captured and session marked complete
+8. All chat history and progress saved for future reference
 
 ## External Dependencies
 
@@ -108,6 +123,18 @@ Preferred communication style: Simple, everyday language.
 - Replit-specific plugins for development environment
 
 ## Recent Changes (Latest First)
+
+### Phase 3: Interactive Reframing Chatbot (January 2025)
+- ✅ **COMPLETE**: Built interactive chat interface for guided CBT reframing
+- ✅ Added reframing session database schema with chat history storage
+- ✅ Created 5 CBT reframing methods: Evidence Check, Alternative Perspectives, Balanced Thinking, Self-Compassion, Action Focus
+- ✅ Implemented real-time chat with OpenAI using personalized user context from intake responses
+- ✅ Built progressive reframing system that guides users to discover insights themselves
+- ✅ Added session completion detection with final reframed thought capture
+- ✅ Applied comprehensive rules system with crisis detection and security measures
+- ✅ Fixed frontend API integration issues and tested complete user flow
+- ✅ Enhanced storage interface with reframing session CRUD operations
+- ✅ **USER FLOW**: Journal analysis → Thought selection → Method choice → Interactive chat → Guided reframing → Completion
 
 ### Phase 2: Journal Entry + AI Analysis (January 2025)
 - ✅ Added OpenAI integration with GPT-4o for cognitive distortion detection

@@ -76,13 +76,13 @@ export default function Reframe() {
 
       return apiRequest('/api/reframing/start', {
         method: 'POST',
-        body: JSON.stringify({
+        body: {
           journalSessionId: parseInt(sessionId),
           userId: parseInt(userId),
           selectedThought: thought,
           distortionType: distortion,
           reframingMethod: reframingMethod
-        })
+        }
       });
     },
     onSuccess: (data) => {
@@ -115,10 +115,10 @@ export default function Reframe() {
       
       return apiRequest(`/api/reframing/${reframingSessionId}/chat`, {
         method: 'POST',
-        body: JSON.stringify({
+        body: {
           message,
           userId: parseInt(userId)
-        })
+        }
       });
     },
     onSuccess: async (response: ChatResponse) => {
