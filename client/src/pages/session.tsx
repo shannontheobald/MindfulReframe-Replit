@@ -109,11 +109,14 @@ export default function Session() {
   };
 
   const handleSelectThought = (thought: DetectedThought) => {
-    // TODO: Navigate to reframing page with selected thought
-    toast({
-      title: "Coming Soon",
-      description: `Ready to reframe: "${thought.thought.substring(0, 50)}..."`,
+    // Navigate to reframing page with selected thought
+    const queryParams = new URLSearchParams({
+      sessionId: analysisResult!.sessionId.toString(),
+      thought: thought.thought,
+      distortion: thought.distortion,
+      userId: '1' // Mock user ID for now
     });
+    setLocation(`/reframe?${queryParams.toString()}`);
   };
 
   const handleDeleteSessions = () => {

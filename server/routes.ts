@@ -1,10 +1,10 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertIntakeResponseSchema, insertJournalSessionSchema } from "@shared/schema";
+import { insertIntakeResponseSchema, insertJournalSessionSchema, insertReframingSessionSchema } from "@shared/schema";
 import { z } from "zod";
 import { getDatabaseStatus } from "./database-status";
-import { analyzeJournalEntry } from "./openai-service";
+import { analyzeJournalEntry, chatReframe, type ChatMessage } from "./openai-service";
 import { RULES } from "../shared/rules";
 import { 
   validateJournalEntry, 
@@ -173,6 +173,177 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(session);
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // ===========================
+  // 💬 REFRAMING SESSION ROUTES
+  // ===========================
+
+  // Start a new reframing session
+  app.post("/api/reframing/start", async (req, res) => {
+    try {
+      const createReframingSchema = insertReframingSessionSchema.extend({
+        journalSessionId: z.number(),
+        userId: z.number(),
+        selectedThought: z.string().min(1),
+        distortionType: z.string().min(1),
+        reframingMethod: z.enum(['evidenceCheck', 'alternativePerspectives', 'balancedThinking', 'compassionateSelf', 'actionOriented']),
+      });
+
+      const validatedData = createReframingSchema.parse(req.body);
+
+      // Apply rules validation
+      const validation = validateJournalEntry(validatedData.selectedThought);
+      if (!validation.isValid) {
+        return res.status(400).json({ error: validation.errors[0] });
+      }
+
+      // Create new reframing session
+      const session = await storage.createReframingSession({
+        ...validatedData,
+        chatHistory: [],
+        isCompleted: false,
+      });
+
+      res.json({ sessionId: session.id, message: "Reframing session started successfully" });
+    } catch (error) {
+      console.error("Error starting reframing session:", error);
+      res.status(500).json({ error: "Failed to start reframing session" });
+    }
+  });
+
+  // Chat in a reframing session
+  app.post("/api/reframing/:sessionId/chat", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const { message, userId } = req.body;
+
+      if (isNaN(sessionId) || !message || !userId) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      // Get the reframing session
+      const session = await storage.getReframingSessionById(sessionId);
+      if (!session) {
+        return res.status(404).json({ error: "Reframing session not found" });
+      }
+
+      // Security: Ensure user owns this session
+      if (session.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      if (session.isCompleted) {
+        return res.status(400).json({ error: "This reframing session is already completed" });
+      }
+
+      // Get user context for personalization
+      const userContext = await storage.getIntakeResponseByUserId(userId);
+
+      // Parse existing chat history
+      const chatHistory: ChatMessage[] = session.chatHistory.map(msg => {
+        try {
+          return typeof msg === 'string' ? JSON.parse(msg) : msg;
+        } catch {
+          return { role: 'user', content: msg, timestamp: new Date() };
+        }
+      });
+
+      // Call AI reframing service
+      const response = await chatReframe(
+        session.selectedThought,
+        session.distortionType,
+        session.reframingMethod,
+        message,
+        chatHistory,
+        userContext || undefined,
+        0 // TODO: Implement token tracking per user
+      );
+
+      // Update chat history
+      const newUserMessage: ChatMessage = {
+        role: 'user',
+        content: message,
+        timestamp: new Date()
+      };
+
+      const newAssistantMessage: ChatMessage = {
+        role: 'assistant',
+        content: response.message,
+        timestamp: new Date()
+      };
+
+      const updatedHistory = [...chatHistory, newUserMessage, newAssistantMessage];
+
+      // Update session with new history and completion status
+      const updates: any = {
+        chatHistory: updatedHistory.map(msg => JSON.stringify(msg)),
+      };
+
+      if (response.isComplete && response.finalReframedThought) {
+        updates.isCompleted = true;
+        updates.finalReframedThought = response.finalReframedThought;
+        updates.completedAt = new Date();
+      }
+
+      await storage.updateReframingSession(sessionId, updates);
+
+      res.json({
+        message: response.message,
+        isComplete: response.isComplete,
+        finalReframedThought: response.finalReframedThought,
+        nextSuggestion: response.nextSuggestion
+      });
+
+    } catch (error: any) {
+      console.error("Error in reframing chat:", error);
+      
+      if (error.message?.includes("Daily AI usage limit reached")) {
+        return res.status(429).json({ error: error.message });
+      }
+      
+      res.status(500).json({ error: "Failed to process reframing chat" });
+    }
+  });
+
+  // Get reframing session details
+  app.get("/api/reframing/:sessionId", async (req, res) => {
+    try {
+      const sessionId = parseInt(req.params.sessionId);
+      const userId = parseInt(req.query.userId as string);
+
+      if (isNaN(sessionId) || isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid session ID or user ID" });
+      }
+
+      const session = await storage.getReframingSessionById(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({ error: "Reframing session not found" });
+      }
+
+      // Security: Ensure user owns this session
+      if (session.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Parse chat history for frontend
+      const chatHistory = session.chatHistory.map(msg => {
+        try {
+          return typeof msg === 'string' ? JSON.parse(msg) : msg;
+        } catch {
+          return { role: 'user', content: msg, timestamp: new Date() };
+        }
+      });
+
+      res.json({
+        ...session,
+        chatHistory
+      });
+    } catch (error) {
+      console.error("Error fetching reframing session:", error);
+      res.status(500).json({ error: "Failed to fetch reframing session" });
     }
   });
 

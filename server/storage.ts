@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/neon-serverless";
 import { neon } from "@neondatabase/serverless";
-import { users, intakeResponses, journalSessions, type User, type InsertUser, type IntakeResponse, type InsertIntakeResponse, type JournalSession, type InsertJournalSession } from "@shared/schema";
+import { users, intakeResponses, journalSessions, reframingSessions, type User, type InsertUser, type IntakeResponse, type InsertIntakeResponse, type JournalSession, type InsertJournalSession, type ReframingSession, type InsertReframingSession } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { checkDatabaseConnection } from "./database-status";
 import { RULES } from "../shared/rules";
@@ -14,6 +14,10 @@ export interface IStorage {
   createJournalSession(session: InsertJournalSession): Promise<JournalSession>;
   getJournalSessionsByUserId(userId: number): Promise<JournalSession[]>;
   getJournalSession(id: number): Promise<JournalSession | undefined>;
+  createReframingSession(session: InsertReframingSession): Promise<ReframingSession>;
+  getReframingSessionById(sessionId: number): Promise<ReframingSession | undefined>;
+  updateReframingSession(sessionId: number, updates: Partial<ReframingSession>): Promise<void>;
+  getReframingSessionsByUserId(userId: number): Promise<ReframingSession[]>;
 }
 
 // Initialize database connection if DATABASE_URL exists, otherwise use in-memory storage
@@ -86,23 +90,45 @@ export class DatabaseStorage implements IStorage {
     const result = await db.select().from(journalSessions).where(eq(journalSessions.id, id)).limit(1);
     return result[0];
   }
+
+  async createReframingSession(session: InsertReframingSession): Promise<ReframingSession> {
+    const result = await db.insert(reframingSessions).values(session).returning();
+    return result[0];
+  }
+
+  async getReframingSessionById(sessionId: number): Promise<ReframingSession | undefined> {
+    const result = await db.select().from(reframingSessions).where(eq(reframingSessions.id, sessionId)).limit(1);
+    return result[0];
+  }
+
+  async updateReframingSession(sessionId: number, updates: Partial<ReframingSession>): Promise<void> {
+    await db.update(reframingSessions).set(updates).where(eq(reframingSessions.id, sessionId));
+  }
+
+  async getReframingSessionsByUserId(userId: number): Promise<ReframingSession[]> {
+    return await db.select().from(reframingSessions).where(eq(reframingSessions.userId, userId));
+  }
 }
 
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private intakeResponses: Map<number, IntakeResponse>;
   private journalSessions: Map<number, JournalSession>;
+  private reframingSessions: Map<number, ReframingSession>;
   private currentUserId: number;
   private currentIntakeId: number;
   private currentSessionId: number;
+  private currentReframingId: number;
 
   constructor() {
     this.users = new Map();
     this.intakeResponses = new Map();
     this.journalSessions = new Map();
+    this.reframingSessions = new Map();
     this.currentUserId = 1;
     this.currentIntakeId = 1;
     this.currentSessionId = 1;
+    this.currentReframingId = 1;
   }
 
   async getUser(id: number): Promise<User | undefined> {
@@ -168,6 +194,43 @@ export class MemStorage implements IStorage {
   async getJournalSession(id: number): Promise<JournalSession | undefined> {
     return this.journalSessions.get(id);
   }
+
+  async createReframingSession(insertSession: InsertReframingSession): Promise<ReframingSession> {
+    const id = this.currentReframingId++;
+    const session: ReframingSession = {
+      id,
+      journalSessionId: insertSession.journalSessionId,
+      userId: insertSession.userId,
+      selectedThought: insertSession.selectedThought,
+      distortionType: insertSession.distortionType,
+      reframingMethod: insertSession.reframingMethod,
+      chatHistory: insertSession.chatHistory || [],
+      finalReframedThought: insertSession.finalReframedThought || null,
+      isCompleted: insertSession.isCompleted || false,
+      createdAt: new Date(),
+      completedAt: insertSession.completedAt || null,
+    };
+    this.reframingSessions.set(id, session);
+    return session;
+  }
+
+  async getReframingSessionById(sessionId: number): Promise<ReframingSession | undefined> {
+    return this.reframingSessions.get(sessionId);
+  }
+
+  async updateReframingSession(sessionId: number, updates: Partial<ReframingSession>): Promise<void> {
+    const session = this.reframingSessions.get(sessionId);
+    if (session) {
+      const updatedSession = { ...session, ...updates };
+      this.reframingSessions.set(sessionId, updatedSession);
+    }
+  }
+
+  async getReframingSessionsByUserId(userId: number): Promise<ReframingSession[]> {
+    return Array.from(this.reframingSessions.values())
+      .filter((session) => session.userId === userId)
+      .sort((a, b) => (a.createdAt?.getTime() || 0) - (b.createdAt?.getTime() || 0));
+  }
 }
 
 // Create a dynamic storage that checks database availability
@@ -205,6 +268,22 @@ class DynamicStorage implements IStorage {
 
   async getJournalSession(id: number): Promise<JournalSession | undefined> {
     return dbAvailable ? this.dbStorage.getJournalSession(id) : this.memStorage.getJournalSession(id);
+  }
+
+  async createReframingSession(session: InsertReframingSession): Promise<ReframingSession> {
+    return dbAvailable ? this.dbStorage.createReframingSession(session) : this.memStorage.createReframingSession(session);
+  }
+
+  async getReframingSessionById(sessionId: number): Promise<ReframingSession | undefined> {
+    return dbAvailable ? this.dbStorage.getReframingSessionById(sessionId) : this.memStorage.getReframingSessionById(sessionId);
+  }
+
+  async updateReframingSession(sessionId: number, updates: Partial<ReframingSession>): Promise<void> {
+    return dbAvailable ? this.dbStorage.updateReframingSession(sessionId, updates) : this.memStorage.updateReframingSession(sessionId, updates);
+  }
+
+  async getReframingSessionsByUserId(userId: number): Promise<ReframingSession[]> {
+    return dbAvailable ? this.dbStorage.getReframingSessionsByUserId(userId) : this.memStorage.getReframingSessionsByUserId(userId);
   }
 }
 

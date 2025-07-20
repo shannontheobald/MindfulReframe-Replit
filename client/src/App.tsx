@@ -8,6 +8,7 @@ import Home from "@/pages/home";
 import Intake from "@/pages/intake";
 import PastSessions from "@/pages/past-sessions";
 import Session from "@/pages/session";
+import Reframe from "@/pages/reframe";
 
 function Router() {
   return (
@@ -15,6 +16,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/intake" component={Intake} />
       <Route path="/session" component={Session} />
+      <Route path="/reframe" component={Reframe} />
       <Route path="/past-sessions" component={PastSessions} />
       <Route component={NotFound} />
     </Switch>
