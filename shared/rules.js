@@ -335,6 +335,51 @@ export const RULES = {
       scheduledMaintenanceWindowHours: [2, 4], // 2 AM - 4 AM UTC
       notifyUsersOfMaintenance: true
     }
+  },
+
+  // ===========================
+  // 🛠️ DEVELOPMENT & CODE STABILITY
+  // ===========================
+  DEVELOPMENT: {
+    // Code change restrictions
+    CODE_STABILITY: {
+      limitCodeChanges: true,
+      allowChangesOnlyFor: [
+        'addingNewFunctionality',
+        'debuggingCriticalIssues',
+        'securityVulnerabilityFixes',
+        'performanceOptimizations',
+        'userRequestedFeatures'
+      ],
+      
+      prohibitChangesFor: [
+        'stylingTweaks',
+        'minorRefactoring',
+        'unnecessaryOptimizations',
+        'cosmetic improvements',
+        'speculative enhancements'
+      ],
+
+      requireJustificationFor: [
+        'architecturalChanges',
+        'dependencyUpdates', 
+        'apiModifications',
+        'databaseSchemaChanges'
+      ],
+
+      preserveWorkingCode: true,
+      avoidBreakingChanges: true,
+      testBeforeDeploying: true
+    },
+
+    // Change management
+    CHANGE_MANAGEMENT: {
+      documentAllChanges: true,
+      trackChangeReasons: true,
+      requireApprovalForMajorChanges: true,
+      maintainChangeLog: true,
+      enableRollbackCapability: true
+    }
   }
 };
 
