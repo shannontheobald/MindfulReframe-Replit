@@ -1,6 +1,6 @@
-import { useState } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
+import { useSession } from "@/context/SessionContext";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { z } from "zod";
@@ -44,8 +44,7 @@ interface SessionLimitError {
 
 export default function Session() {
   const [, setLocation] = useLocation();
-  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
-  const [sessionLimitError, setSessionLimitError] = useState<SessionLimitError | null>(null);
+  const { analysisResult, setAnalysisResult, sessionLimitError, setSessionLimitError, clearSession } = useSession();
   const { toast } = useToast();
 
   const form = useForm<JournalFormData>({
@@ -202,11 +201,11 @@ export default function Session() {
           <div className="max-w-4xl mx-auto flex items-center justify-between">
             <Button
               variant="ghost"
-              onClick={() => setLocation("/")}
+              onClick={() => window.history.back()}
               className="flex items-center space-x-2 text-warm-gray hover:text-charcoal"
             >
               <ArrowLeft className="w-5 h-5" />
-              <span>Back to Home</span>
+              <span>Back</span>
             </Button>
             <h2 className="text-xl font-semibold text-charcoal">Thought Analysis</h2>
           </div>
@@ -277,13 +276,12 @@ export default function Session() {
             <div className="flex justify-center space-x-4">
               <Button
                 onClick={() => {
-                  setAnalysisResult(null);
-                  setSessionLimitError(null);
+                  clearSession();
                   form.reset();
                 }}
                 className="px-8 py-3 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-full hover:shadow-lg hover:scale-105 transition-all duration-200"
               >
-                Start New Entry
+                Start New Session
               </Button>
               <Button
                 variant="outline"
