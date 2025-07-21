@@ -202,15 +202,11 @@ export default function Session() {
           <div className="max-w-4xl mx-auto flex items-center justify-between">
             <Button
               variant="ghost"
-              onClick={() => {
-                setAnalysisResult(null);
-                setSessionLimitError(null);
-                form.reset();
-              }}
+              onClick={() => setLocation("/")}
               className="flex items-center space-x-2 text-warm-gray hover:text-charcoal"
             >
               <ArrowLeft className="w-5 h-5" />
-              <span>New Entry</span>
+              <span>Back to Home</span>
             </Button>
             <h2 className="text-xl font-semibold text-charcoal">Thought Analysis</h2>
           </div>
@@ -279,6 +275,16 @@ export default function Session() {
 
             {/* Actions */}
             <div className="flex justify-center space-x-4">
+              <Button
+                onClick={() => {
+                  setAnalysisResult(null);
+                  setSessionLimitError(null);
+                  form.reset();
+                }}
+                className="px-8 py-3 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-full hover:shadow-lg hover:scale-105 transition-all duration-200"
+              >
+                Start New Entry
+              </Button>
               <Button
                 variant="outline"
                 onClick={() => setLocation("/")}
