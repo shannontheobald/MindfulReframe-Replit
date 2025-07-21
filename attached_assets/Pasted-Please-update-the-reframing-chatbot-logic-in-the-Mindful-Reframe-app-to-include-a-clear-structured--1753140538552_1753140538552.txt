@@ -1,0 +1,65 @@
+Please update the reframing chatbot logic in the Mindful Reframe app to include a clear, structured "end state" and pacing logic.
+
+🎯 Current Problem:
+The chatbot currently loops infinitely once a user selects a distorted thought, with no signal to conclude or move forward.
+
+✅ New Desired Behavior:
+Add pacing and closure using this structure:
+
+---
+
+🔁 Reframing Turn Structure:
+
+- Each user-thought pairing (one distortion) allows a **maximum of 12 total exchanges** (i.e., 6 user messages and 6 bot replies).
+- After **every 3 full back-and-forths** (3 user messages + 3 bot replies), prompt the user with this message:
+
+> “Would you like to keep working on this thought, try a different one, or move on to your visualization?”
+> 
+> 
+> **A)** Keep Reframing
+> 
+> **B)** Reframe a Different Thought
+> 
+> **C)** Create Visualization
+> 
+
+---
+
+📌 Decision Logic:
+
+- If user selects A → continue chat (if still < 12 total exchanges)
+- If user selects B → return to list of remaining distorted thoughts
+- If user selects C → end the chat and generate visualization
+- If user reaches 12 exchanges, **automatically conclude** the reframe for that thought and show the wrap-up, then offer options B and C only.
+
+---
+
+📋 Reframing Summary (on exit from each thought):
+Display a gentle summary card containing:
+
+- **Original Thought** (user input)
+- **Detected Distortion** (e.g., catastrophizing)
+- **Final Reframed Belief** (summary of user’s positive replies.)
+- Optional message:*“You’ve done great work on this thought - Here’s what you’re learning to believe instead.”*
+
+Save this summary card to `session.reframes[]` for session history.
+
+---
+
+🧠 Additional Notes:
+
+- Use a calming and affirming tone throughout
+- Track number of exchanges using `flow.state.reframeTurns`
+- Track completed thoughts using `flow.state.reframedThoughts[]`
+- If only one distortion remains, skip option B and just show A / C
+
+---
+
+Example End-of-Thought Message (after 12 turns or user exits):
+
+> “You’ve put thoughtful energy into shifting this belief. Let’s take a moment to reflect, then decide if you’d like to go deeper or move forward.”
+> 
+
+---
+
+Thank you! Please implement this first for the reframing chatbot and ensure it links cleanly to the visualization step.

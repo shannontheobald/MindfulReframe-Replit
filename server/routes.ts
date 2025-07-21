@@ -250,13 +250,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      // Call AI reframing service
+      // Call AI reframing service with turn tracking
       const response = await chatReframe(
         session.selectedThought,
         session.distortionType,
         session.reframingMethod,
         message,
         chatHistory,
+        session.turnCount || 0,
+        session.maxTurns || 12,
         userContext || undefined,
         0 // TODO: Implement token tracking per user
       );
@@ -276,9 +278,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const updatedHistory = [...chatHistory, newUserMessage, newAssistantMessage];
 
-      // Update session with new history and completion status
+      // Update session with new history, turn count, and completion status
       const updates: any = {
         chatHistory: updatedHistory.map(msg => JSON.stringify(msg)),
+        turnCount: (session.turnCount || 0) + 1
       };
 
       if (response.isComplete && response.finalReframedThought) {
@@ -293,7 +296,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: response.message,
         isComplete: response.isComplete,
         finalReframedThought: response.finalReframedThought,
-        nextSuggestion: response.nextSuggestion
+        nextSuggestion: response.nextSuggestion,
+        showPacingOptions: response.showPacingOptions,
+        reachedTurnLimit: response.reachedTurnLimit,
+        turnCount: updates.turnCount,
+        maxTurns: session.maxTurns || 12
       });
 
     } catch (error: any) {

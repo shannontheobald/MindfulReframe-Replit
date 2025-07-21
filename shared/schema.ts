@@ -38,6 +38,8 @@ export const reframingSessions = pgTable("reframing_sessions", {
   chatHistory: text("chat_history").array().notNull().default([]),
   finalReframedThought: text("final_reframed_thought"),
   isCompleted: boolean("is_completed").default(false).notNull(),
+  turnCount: integer("turn_count").default(0).notNull(),
+  maxTurns: integer("max_turns").default(12).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   completedAt: timestamp("completed_at"),
 });

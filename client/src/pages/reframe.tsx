@@ -34,6 +34,8 @@ interface ReframingSession {
   chatHistory: ChatMessage[];
   finalReframedThought?: string;
   isCompleted: boolean;
+  turnCount?: number;
+  maxTurns?: number;
 }
 
 interface ChatResponse {
@@ -41,6 +43,10 @@ interface ChatResponse {
   isComplete: boolean;
   finalReframedThought?: string;
   nextSuggestion?: string;
+  showPacingOptions?: boolean;
+  reachedTurnLimit?: boolean;
+  turnCount?: number;
+  maxTurns?: number;
 }
 
 // Method-specific starter prompts component
@@ -96,10 +102,119 @@ What specific actions could you take? What parts of this situation are within yo
   );
 };
 
+// Pacing Options Component
+const PacingOptionsCard = ({ 
+  onKeepReframing, 
+  onTryDifferent, 
+  onCreateVisualization,
+  turnCount,
+  maxTurns,
+  isAtLimit 
+}: {
+  onKeepReframing: () => void;
+  onTryDifferent: () => void;
+  onCreateVisualization: () => void;
+  turnCount: number;
+  maxTurns: number;
+  isAtLimit: boolean;
+}) => (
+  <Card className="glass-effect border-primary/30 max-w-2xl mx-auto">
+    <CardContent className="p-6">
+      <div className="text-center mb-4">
+        <h3 className="text-lg font-semibold text-charcoal mb-2">
+          {isAtLimit ? "You've reached the limit for this thought" : "How would you like to continue?"}
+        </h3>
+        <p className="text-warm-gray text-sm">
+          {isAtLimit 
+            ? `You've put thoughtful energy into shifting this belief (${turnCount}/${maxTurns} exchanges). Let's take a moment to reflect.`
+            : `After ${Math.floor(turnCount / 2)} exchanges, you have these options:`
+          }
+        </p>
+      </div>
+      
+      <div className="space-y-3">
+        {!isAtLimit && (
+          <Button
+            onClick={onKeepReframing}
+            className="w-full bg-gradient-to-r from-primary to-secondary text-white hover:shadow-lg transition-all"
+          >
+            A) Keep Reframing This Thought
+          </Button>
+        )}
+        
+        <Button
+          onClick={onTryDifferent}
+          variant="outline"
+          className="w-full glass-effect"
+        >
+          {isAtLimit ? "Try a Different Thought" : "B) Reframe a Different Thought"}
+        </Button>
+        
+        <Button
+          onClick={onCreateVisualization}
+          variant="outline"
+          className="w-full glass-effect border-secondary/50 text-secondary hover:bg-secondary/10"
+        >
+          {isAtLimit ? "Create Visualization" : "C) Create Visualization"}
+        </Button>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+// Completion Summary Card
+const CompletionSummaryCard = ({ 
+  originalThought, 
+  distortion, 
+  finalReframe 
+}: {
+  originalThought: string;
+  distortion: string;
+  finalReframe: string;
+}) => (
+  <Card className="glass-effect border-green-200 bg-green-50/50 max-w-2xl mx-auto mb-4">
+    <CardContent className="p-6">
+      <div className="flex items-center mb-4">
+        <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
+        <h3 className="text-lg font-semibold text-green-800">Reframing Complete</h3>
+      </div>
+      
+      <div className="space-y-3">
+        <div>
+          <span className="font-medium text-charcoal">Original Thought:</span>
+          <p className="text-warm-gray italic">"{originalThought}"</p>
+        </div>
+        
+        <div>
+          <span className="font-medium text-charcoal">Pattern Identified:</span>
+          <Badge variant="outline" className="ml-2">{distortion}</Badge>
+        </div>
+        
+        <div>
+          <span className="font-medium text-charcoal">Your New Perspective:</span>
+          <p className="text-green-700 font-medium">"{finalReframe}"</p>
+        </div>
+      </div>
+      
+      <p className="text-sm text-green-600 mt-4 italic">
+        "You've done great work on this thought - Here's what you're learning to believe instead."
+      </p>
+    </CardContent>
+  </Card>
+);
+
 export default function Reframe() {
   const [, setLocation] = useLocation();
   const [reframingSessionId, setReframingSessionId] = useState<number | null>(null);
   const [reframingMethod, setReframingMethod] = useState<string>('evidenceCheck');
+  const [showPacingOptions, setShowPacingOptions] = useState(false);
+  const [currentTurnCount, setCurrentTurnCount] = useState(0);
+  const [maxTurns, setMaxTurns] = useState(12);
+  const [completionSummary, setCompletionSummary] = useState<{
+    originalThought: string;
+    distortion: string;
+    finalReframe: string;
+  } | null>(null);
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -177,8 +292,28 @@ export default function Reframe() {
     onSuccess: async (response: ChatResponse) => {
       form.reset();
       await refetchSession();
+
+      // Update turn tracking
+      if (response.turnCount !== undefined) {
+        setCurrentTurnCount(response.turnCount);
+      }
+      if (response.maxTurns !== undefined) {
+        setMaxTurns(response.maxTurns);
+      }
+
+      // Handle pacing options
+      if (response.showPacingOptions || response.reachedTurnLimit) {
+        setShowPacingOptions(true);
+      }
       
+      // Handle completion
       if (response.isComplete && response.finalReframedThought) {
+        setCompletionSummary({
+          originalThought: thought || '',
+          distortion: distortion || '',
+          finalReframe: response.finalReframedThought
+        });
+        
         toast({
           title: "Reframing Complete!",
           description: "You've successfully reframed this thought. Great work!",
@@ -193,6 +328,24 @@ export default function Reframe() {
       });
     }
   });
+
+  // Pacing options handlers
+  const handleKeepReframing = () => {
+    setShowPacingOptions(false);
+  };
+
+  const handleTryDifferent = () => {
+    // Go back to session page to select a different thought
+    setLocation(`/session`);
+  };
+
+  const handleCreateVisualization = () => {
+    // Navigate to visualization page (to be implemented)
+    toast({
+      title: "Visualization Coming Soon",
+      description: "This feature will be available in the next update.",
+    });
+  };
 
   // Don't auto-start session - let user choose method first
 
@@ -404,6 +557,27 @@ export default function Reframe() {
                   </div>
                 </div>
 
+                {/* Completion Summary */}
+                {completionSummary && (
+                  <CompletionSummaryCard
+                    originalThought={completionSummary.originalThought}
+                    distortion={completionSummary.distortion}
+                    finalReframe={completionSummary.finalReframe}
+                  />
+                )}
+
+                {/* Pacing Options */}
+                {showPacingOptions && !session.isCompleted && (
+                  <PacingOptionsCard
+                    onKeepReframing={handleKeepReframing}
+                    onTryDifferent={handleTryDifferent}
+                    onCreateVisualization={handleCreateVisualization}
+                    turnCount={currentTurnCount}
+                    maxTurns={maxTurns}
+                    isAtLimit={currentTurnCount >= maxTurns}
+                  />
+                )}
+
                 {/* Final Reframed Thought */}
                 {session.isCompleted && session.finalReframedThought && (
                   <Card className="bg-green-50 border-green-200">
@@ -415,7 +589,7 @@ export default function Reframe() {
                 )}
 
                 {/* Message Input */}
-                {!session.isCompleted && (
+                {!session.isCompleted && !showPacingOptions && (
                   <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="flex space-x-2">
                       <FormField
@@ -447,6 +621,13 @@ export default function Reframe() {
                       </Button>
                     </form>
                   </Form>
+                )}
+
+                {/* Progress indicator */}
+                {currentTurnCount > 0 && !session.isCompleted && (
+                  <div className="text-center text-xs text-warm-gray">
+                    Exchange {Math.ceil(currentTurnCount / 2)} of {Math.ceil(maxTurns / 2)}
+                  </div>
                 )}
 
                 {session.isCompleted && (

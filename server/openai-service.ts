@@ -33,6 +33,8 @@ export interface ReframingChatResponse {
   isComplete: boolean;
   finalReframedThought?: string;
   nextSuggestion?: string;
+  showPacingOptions?: boolean;
+  reachedTurnLimit?: boolean;
 }
 
 export interface JournalAnalysis {
@@ -188,6 +190,8 @@ export async function chatReframe(
   reframingMethod: string,
   userMessage: string,
   chatHistory: ChatMessage[] = [],
+  turnCount: number = 0,
+  maxTurns: number = 12,
   userContext?: {
     question1?: string;
     question2?: string;
@@ -277,7 +281,11 @@ User background (use this to personalize your approach):
       ? `Previous conversation:\n${chatHistory.map(msg => `${msg.role}: ${msg.content}`).join('\n')}\n\n`
       : '';
 
-    const systemPrompt = `${getAssistantTonePrompt()}
+    // Check if we need to show pacing options
+    const shouldShowPacingOptions = turnCount > 0 && (turnCount % 6 === 0 || turnCount >= maxTurns);
+    const reachedTurnLimit = turnCount >= maxTurns;
+
+    let systemPrompt = `${getAssistantTonePrompt()}
 
 You are guiding a user through reframing this negative thought: "${selectedThought}"
 This thought shows signs of: ${distortionType}
@@ -285,13 +293,15 @@ This thought shows signs of: ${distortionType}
 Current reframing method: ${methodInfo.name} - ${methodInfo.focus}
 Method guidance: ${methodInfo.guidance}
 
+Turn tracking: This is turn ${turnCount + 1} of maximum ${maxTurns} exchanges.
+
 ${contextPrompt}
 
 ${conversationContext}
 
 Your role:
 1. Ask thoughtful questions to help them examine this thought
-2. Guide them to discover insights themselves (don't give direct answers)
+2. Guide them to discover insights themselves (don't give direct answers)  
 3. Use the specific reframing method focus
 4. Keep responses short and conversational (2-3 sentences max)
 5. When they've made good progress, suggest they write their reframed thought
@@ -300,11 +310,23 @@ Look for signs they're ready to complete:
 - They've identified evidence against the thought
 - They've found a more balanced perspective
 - They're thinking more realistically about the situation
-- They express less emotional intensity about the thought
+- They express less emotional intensity about the thought`;
 
-Respond with JSON: { "message": "your response", "isComplete": false, "finalReframedThought": null, "nextSuggestion": "optional next step" }
+    if (reachedTurnLimit) {
+      systemPrompt += `
 
-If they seem ready to finish, set isComplete to true and include their reframed thought.`;
+IMPORTANT: You have reached the maximum turns (${maxTurns}). Provide a gentle conclusion that summarizes their progress and suggests they've done great work on this thought. Set isComplete to true and capture their best reframed perspective.`;
+    } else if (shouldShowPacingOptions) {
+      systemPrompt += `
+
+PACING CHECK: After this response, the user should be offered pacing options (continue, try different thought, or move to visualization). Keep your response brief and supportive.`;
+    }
+
+    systemPrompt += `
+
+Respond with JSON: { "message": "your response", "isComplete": ${reachedTurnLimit}, "finalReframedThought": ${reachedTurnLimit ? '"summarize their best reframed thought"' : 'null'}, "nextSuggestion": "optional next step", "showPacingOptions": ${shouldShowPacingOptions}, "reachedTurnLimit": ${reachedTurnLimit} }
+
+If they seem ready to finish naturally, set isComplete to true and include their reframed thought.`;
 
     const model = getModelForTask('guideReframingProcess');
     const maxTokens = getMaxTokensForOperation('guideReframingProcess');
