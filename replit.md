@@ -134,6 +134,8 @@ Preferred communication style: Simple, everyday language.
 - ✅ Applied comprehensive rules system with crisis detection and security measures
 - ✅ Fixed frontend API integration issues and tested complete user flow
 - ✅ Enhanced storage interface with reframing session CRUD operations
+- ✅ **Method-Specific Starter Prompts**: Each reframing approach now shows tailored initial guidance
+- ✅ **Improved Navigation**: Back button uses browser history to preserve page state without API calls
 - ✅ **USER FLOW**: Journal analysis → Thought selection → Method choice → Interactive chat → Guided reframing → Completion
 
 ### Phase 2: Journal Entry + AI Analysis (January 2025)

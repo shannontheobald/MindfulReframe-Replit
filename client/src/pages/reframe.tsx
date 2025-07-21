@@ -258,11 +258,11 @@ export default function Reframe() {
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <Button
             variant="ghost"
-            onClick={() => setLocation(`/session?sessionId=${sessionId}`)}
+            onClick={() => window.history.back()}
             className="flex items-center space-x-2 text-warm-gray hover:text-charcoal"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span>Back to Analysis</span>
+            <span>Back</span>
           </Button>
           <h2 className="text-xl font-semibold text-charcoal">Reframe Your Thought</h2>
         </div>
@@ -450,14 +450,7 @@ export default function Reframe() {
                 )}
 
                 {session.isCompleted && (
-                  <div className="text-center pt-4 space-y-3">
-                    <Button
-                      onClick={() => setLocation(`/session?sessionId=${sessionId}`)}
-                      variant="outline"
-                      className="px-6 py-2 mr-3"
-                    >
-                      Back to Analysis
-                    </Button>
+                  <div className="text-center pt-4">
                     <Button
                       onClick={() => setLocation("/session")}
                       className="px-8 py-3 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-full hover:shadow-lg hover:scale-105 transition-all duration-200"
