@@ -208,7 +208,9 @@ export class MemStorage implements IStorage {
       finalReframedThought: insertSession.finalReframedThought || null,
       isCompleted: insertSession.isCompleted || false,
       createdAt: new Date(),
-      completedAt: insertSession.completedAt || null,
+      turnCount: 0,
+      maxTurns: 12,
+      completedAt: null,
     };
     this.reframingSessions.set(id, session);
     return session;

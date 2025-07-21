@@ -626,7 +626,7 @@ export default function Reframe() {
                 {/* Progress indicator */}
                 {currentTurnCount > 0 && !session.isCompleted && (
                   <div className="text-center text-xs text-warm-gray">
-                    Exchange {Math.ceil(currentTurnCount / 2)} of {Math.ceil(maxTurns / 2)}
+                    Exchange {Math.ceil(currentTurnCount / 2)} of {Math.ceil(maxTurns / 2)} • Next pacing check in {6 - (currentTurnCount % 6)} messages
                   </div>
                 )}
 

@@ -281,9 +281,13 @@ User background (use this to personalize your approach):
       ? `Previous conversation:\n${chatHistory.map(msg => `${msg.role}: ${msg.content}`).join('\n')}\n\n`
       : '';
 
-    // Check if we need to show pacing options
-    const shouldShowPacingOptions = turnCount > 0 && (turnCount % 6 === 0 || turnCount >= maxTurns);
-    const reachedTurnLimit = turnCount >= maxTurns;
+    // Check if we need to show pacing options (after every 6 messages = 3 full exchanges)
+    // The new turnCount will be +2 after this exchange, so check if it will reach a pacing checkpoint
+    const nextTurnCount = turnCount + 2;  // +2 because we'll add user message + AI response
+    const shouldShowPacingOptions = nextTurnCount >= 6 && (nextTurnCount % 6 === 0);
+    const reachedTurnLimit = nextTurnCount >= maxTurns;
+    
+    console.log(`Pacing debug: currentTurn=${turnCount}, nextTurn=${nextTurnCount}, shouldShowPacing=${shouldShowPacingOptions}`);
 
     let systemPrompt = `${getAssistantTonePrompt()}
 

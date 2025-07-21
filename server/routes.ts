@@ -279,9 +279,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedHistory = [...chatHistory, newUserMessage, newAssistantMessage];
 
       // Update session with new history, turn count, and completion status
+      // Turn count represents total messages (both user and assistant)
       const updates: any = {
         chatHistory: updatedHistory.map(msg => JSON.stringify(msg)),
-        turnCount: (session.turnCount || 0) + 1
+        turnCount: (session.turnCount || 0) + 2  // +2 because we add both user and assistant messages
       };
 
       if (response.isComplete && response.finalReframedThought) {
