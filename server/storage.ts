@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/neon-serverless";
 import { neon } from "@neondatabase/serverless";
-import { users, intakeResponses, journalSessions, reframingSessions, type User, type InsertUser, type IntakeResponse, type InsertIntakeResponse, type JournalSession, type InsertJournalSession, type ReframingSession, type InsertReframingSession } from "@shared/schema";
+import { users, intakeResponses, journalSessions, reframingSessions, visualizations, type User, type InsertUser, type IntakeResponse, type InsertIntakeResponse, type JournalSession, type InsertJournalSession, type ReframingSession, type InsertReframingSession, type Visualization, type InsertVisualization } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { checkDatabaseConnection } from "./database-status";
 import { RULES } from "../shared/rules";
@@ -18,6 +18,9 @@ export interface IStorage {
   getReframingSessionById(sessionId: number): Promise<ReframingSession | undefined>;
   updateReframingSession(sessionId: number, updates: Partial<ReframingSession>): Promise<void>;
   getReframingSessionsByUserId(userId: number): Promise<ReframingSession[]>;
+  createVisualization(visualization: InsertVisualization): Promise<Visualization>;
+  getVisualizationByReframingSessionId(reframingSessionId: number): Promise<Visualization | undefined>;
+  getVisualizationsByUserId(userId: number): Promise<Visualization[]>;
 }
 
 // Initialize database connection if DATABASE_URL exists, otherwise use in-memory storage
@@ -108,6 +111,20 @@ export class DatabaseStorage implements IStorage {
   async getReframingSessionsByUserId(userId: number): Promise<ReframingSession[]> {
     return await db.select().from(reframingSessions).where(eq(reframingSessions.userId, userId));
   }
+
+  async createVisualization(visualization: InsertVisualization): Promise<Visualization> {
+    const result = await db.insert(visualizations).values(visualization).returning();
+    return result[0];
+  }
+
+  async getVisualizationByReframingSessionId(reframingSessionId: number): Promise<Visualization | undefined> {
+    const result = await db.select().from(visualizations).where(eq(visualizations.reframingSessionId, reframingSessionId)).limit(1);
+    return result[0];
+  }
+
+  async getVisualizationsByUserId(userId: number): Promise<Visualization[]> {
+    return await db.select().from(visualizations).where(eq(visualizations.userId, userId));
+  }
 }
 
 export class MemStorage implements IStorage {
@@ -115,20 +132,24 @@ export class MemStorage implements IStorage {
   private intakeResponses: Map<number, IntakeResponse>;
   private journalSessions: Map<number, JournalSession>;
   private reframingSessions: Map<number, ReframingSession>;
+  private visualizations: Map<number, Visualization>;
   private currentUserId: number;
   private currentIntakeId: number;
   private currentSessionId: number;
   private currentReframingId: number;
+  private currentVisualizationId: number;
 
   constructor() {
     this.users = new Map();
     this.intakeResponses = new Map();
     this.journalSessions = new Map();
     this.reframingSessions = new Map();
+    this.visualizations = new Map();
     this.currentUserId = 1;
     this.currentIntakeId = 1;
     this.currentSessionId = 1;
     this.currentReframingId = 1;
+    this.currentVisualizationId = 1;
   }
 
   async getUser(id: number): Promise<User | undefined> {
@@ -233,6 +254,34 @@ export class MemStorage implements IStorage {
       .filter((session) => session.userId === userId)
       .sort((a, b) => (a.createdAt?.getTime() || 0) - (b.createdAt?.getTime() || 0));
   }
+
+  async createVisualization(insertVisualization: InsertVisualization): Promise<Visualization> {
+    const id = this.currentVisualizationId++;
+    const visualization: Visualization = {
+      id,
+      reframingSessionId: insertVisualization.reframingSessionId,
+      userId: insertVisualization.userId,
+      originalThought: insertVisualization.originalThought,
+      reframedBelief: insertVisualization.reframedBelief,
+      distortion: insertVisualization.distortion,
+      intakeContext: insertVisualization.intakeContext,
+      visualization: insertVisualization.visualization,
+      createdAt: new Date(),
+    };
+    this.visualizations.set(id, visualization);
+    return visualization;
+  }
+
+  async getVisualizationByReframingSessionId(reframingSessionId: number): Promise<Visualization | undefined> {
+    return Array.from(this.visualizations.values())
+      .find((viz) => viz.reframingSessionId === reframingSessionId);
+  }
+
+  async getVisualizationsByUserId(userId: number): Promise<Visualization[]> {
+    return Array.from(this.visualizations.values())
+      .filter((viz) => viz.userId === userId)
+      .sort((a, b) => (a.createdAt?.getTime() || 0) - (b.createdAt?.getTime() || 0));
+  }
 }
 
 // Create a dynamic storage that checks database availability
@@ -286,6 +335,18 @@ class DynamicStorage implements IStorage {
 
   async getReframingSessionsByUserId(userId: number): Promise<ReframingSession[]> {
     return dbAvailable ? this.dbStorage.getReframingSessionsByUserId(userId) : this.memStorage.getReframingSessionsByUserId(userId);
+  }
+
+  async createVisualization(visualization: InsertVisualization): Promise<Visualization> {
+    return dbAvailable ? this.dbStorage.createVisualization(visualization) : this.memStorage.createVisualization(visualization);
+  }
+
+  async getVisualizationByReframingSessionId(reframingSessionId: number): Promise<Visualization | undefined> {
+    return dbAvailable ? this.dbStorage.getVisualizationByReframingSessionId(reframingSessionId) : this.memStorage.getVisualizationByReframingSessionId(reframingSessionId);
+  }
+
+  async getVisualizationsByUserId(userId: number): Promise<Visualization[]> {
+    return dbAvailable ? this.dbStorage.getVisualizationsByUserId(userId) : this.memStorage.getVisualizationsByUserId(userId);
   }
 }
 

@@ -73,3 +73,24 @@ export type JournalSession = typeof journalSessions.$inferSelect;
 export type InsertJournalSession = z.infer<typeof insertJournalSessionSchema>;
 export type ReframingSession = typeof reframingSessions.$inferSelect;
 export type InsertReframingSession = z.infer<typeof insertReframingSessionSchema>;
+
+// Visualization sessions table
+export const visualizations = pgTable('visualizations', {
+  id: serial('id').primaryKey(),
+  reframingSessionId: integer('reframing_session_id').references(() => reframingSessions.id),
+  userId: integer('user_id').references(() => users.id),
+  originalThought: text('original_thought').notNull(),
+  reframedBelief: text('reframed_belief').notNull(),
+  distortion: text('distortion').notNull(),
+  intakeContext: text('intake_context').notNull(), // JSON string of intake responses
+  visualization: text('visualization').notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const insertVisualizationSchema = createInsertSchema(visualizations).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type Visualization = typeof visualizations.$inferSelect;
+export type InsertVisualization = z.infer<typeof insertVisualizationSchema>;

@@ -340,11 +340,16 @@ export default function Reframe() {
   };
 
   const handleCreateVisualization = () => {
-    // Navigate to visualization page (to be implemented)
-    toast({
-      title: "Visualization Coming Soon",
-      description: "This feature will be available in the next update.",
-    });
+    // Navigate to visualization page with current session ID
+    if (reframingSessionId) {
+      setLocation(`/visualization?sessionId=${reframingSessionId}&userId=${userId}`);
+    } else {
+      toast({
+        title: "No Active Session",
+        description: "Please complete a reframing session first.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Don't auto-start session - let user choose method first

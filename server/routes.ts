@@ -5,6 +5,8 @@ import { insertIntakeResponseSchema, insertJournalSessionSchema, insertReframing
 import { z } from "zod";
 import { getDatabaseStatus } from "./database-status";
 import { analyzeJournalEntry, chatReframe, type ChatMessage } from "./openai-service";
+import { generateVisualization } from "./visualization-service";
+import { insertVisualizationSchema } from "@shared/schema";
 import { RULES } from "../shared/rules";
 import { 
   validateJournalEntry, 
@@ -352,6 +354,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching reframing session:", error);
       res.status(500).json({ error: "Failed to fetch reframing session" });
+    }
+  });
+
+  // Generate visualization endpoint
+  app.post("/api/visualization/generate", async (req, res) => {
+    try {
+      const { reframingSessionId, userId } = req.body;
+
+      if (!reframingSessionId || !userId) {
+        return res.status(400).json({ error: "Missing reframing session ID or user ID" });
+      }
+
+      // Get the reframing session
+      const reframingSession = await storage.getReframingSessionById(reframingSessionId);
+      if (!reframingSession) {
+        return res.status(404).json({ error: "Reframing session not found" });
+      }
+
+      // Security: Ensure user owns this session
+      if (reframingSession.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      // Allow visualization generation even if session is not completed, but prefer final reframed thought if available
+      const reframedBelief = reframingSession.finalReframedThought || reframingSession.selectedThought;
+
+      // Check if visualization already exists
+      const existingVisualization = await storage.getVisualizationByReframingSessionId(reframingSessionId);
+      if (existingVisualization) {
+        return res.json({
+          id: existingVisualization.id,
+          visualization: existingVisualization.visualization,
+          intakeContext: JSON.parse(existingVisualization.intakeContext),
+          reframedBelief: existingVisualization.reframedBelief,
+          originalThought: existingVisualization.originalThought,
+          distortion: existingVisualization.distortion,
+          createdAt: existingVisualization.createdAt
+        });
+      }
+
+      // Get user's intake responses for context
+      const intakeResponse = await storage.getIntakeResponseByUserId(userId);
+      if (!intakeResponse) {
+        return res.status(400).json({ error: "User intake responses required for visualization generation" });
+      }
+
+      const intakeContext = {
+        goals: intakeResponse.question1 || "",
+        dreams: intakeResponse.question2 || "",
+        currentChallenges: intakeResponse.question3 || "",
+        supportSources: intakeResponse.question4 || "",
+        selfCareActivities: intakeResponse.question5 || ""
+      };
+
+      // Generate visualization using AI
+      const visualizationResponse = await generateVisualization({
+        originalThought: reframingSession.selectedThought,
+        reframedBelief: reframedBelief,
+        distortion: reframingSession.distortionType,
+        intakeContext
+      });
+
+      // Save visualization to database
+      const visualizationData = {
+        reframingSessionId,
+        userId,
+        originalThought: reframingSession.selectedThought,
+        reframedBelief: reframedBelief,
+        distortion: reframingSession.distortionType,
+        intakeContext: JSON.stringify(intakeContext),
+        visualization: visualizationResponse.visualization
+      };
+
+      const savedVisualization = await storage.createVisualization(visualizationData);
+
+      res.json({
+        id: savedVisualization.id,
+        visualization: savedVisualization.visualization,
+        intakeContext,
+        reframedBelief: savedVisualization.reframedBelief,
+        originalThought: savedVisualization.originalThought,
+        distortion: savedVisualization.distortion,
+        createdAt: savedVisualization.createdAt
+      });
+
+    } catch (error: any) {
+      console.error("Error generating visualization:", error);
+      
+      if (error.message?.includes("AI service")) {
+        return res.status(503).json({ error: error.message });
+      }
+      
+      res.status(500).json({ error: "Failed to generate visualization" });
+    }
+  });
+
+  // Get visualization by reframing session ID
+  app.get("/api/visualization/:reframingSessionId", async (req, res) => {
+    try {
+      const reframingSessionId = parseInt(req.params.reframingSessionId);
+      const userId = parseInt(req.query.userId as string);
+
+      if (isNaN(reframingSessionId) || isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid reframing session ID or user ID" });
+      }
+
+      const visualization = await storage.getVisualizationByReframingSessionId(reframingSessionId);
+      
+      if (!visualization) {
+        return res.status(404).json({ error: "Visualization not found" });
+      }
+
+      // Security: Ensure user owns this visualization
+      if (visualization.userId !== userId) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+
+      res.json({
+        id: visualization.id,
+        visualization: visualization.visualization,
+        intakeContext: JSON.parse(visualization.intakeContext),
+        reframedBelief: visualization.reframedBelief,
+        originalThought: visualization.originalThought,
+        distortion: visualization.distortion,
+        createdAt: visualization.createdAt
+      });
+
+    } catch (error) {
+      console.error("Error fetching visualization:", error);
+      res.status(500).json({ error: "Failed to fetch visualization" });
     }
   });
 
