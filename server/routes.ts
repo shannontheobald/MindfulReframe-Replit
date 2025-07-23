@@ -397,7 +397,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get user's intake responses for context
       const intakeResponse = await storage.getIntakeResponseByUserId(userId);
       if (!intakeResponse) {
-        return res.status(400).json({ error: "User intake responses required for visualization generation" });
+        return res.status(400).json({ 
+          error: "User intake responses required for visualization generation",
+          requiresIntake: true 
+        });
       }
 
       const intakeContext = {

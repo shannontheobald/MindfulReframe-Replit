@@ -66,11 +66,23 @@ export default function VisualizationPage() {
     },
     onError: (error: any) => {
       console.error("Error generating visualization:", error);
-      toast({
-        title: "Generation Failed",
-        description: error.message || "Failed to create visualization. Please try again.",
-        variant: "destructive",
-      });
+      
+      // Check if error is due to missing intake data
+      if (error.message?.includes("intake responses required") || error.requiresIntake) {
+        toast({
+          title: "Intake Required",
+          description: "Please complete the intake form first to generate your visualization.",
+          variant: "destructive",
+        });
+        // Redirect to intake form
+        setTimeout(() => setLocation('/intake'), 2000);
+      } else {
+        toast({
+          title: "Generation Failed",
+          description: error.message || "Failed to create visualization. Please try again.",
+          variant: "destructive",
+        });
+      }
     }
   });
 
@@ -387,16 +399,17 @@ export default function VisualizationPage() {
           <Card>
             <CardContent className="p-12">
               <div className="text-center">
-                <h3 className="text-lg font-semibold mb-2">No Visualization Found</h3>
+                <h3 className="text-lg font-semibold mb-2">Unable to Generate Visualization</h3>
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  We couldn't find or create a visualization for this session.
+                  To create your personalized meditation, we need you to complete the intake form first. 
+                  This helps us understand your goals and create content that's meaningful to you.
                 </p>
                 <div className="flex gap-4 justify-center">
+                  <Button onClick={() => setLocation('/intake')} className="bg-primary text-white">
+                    Complete Intake Form
+                  </Button>
                   <Button onClick={handleBack} variant="outline">
                     Go Back
-                  </Button>
-                  <Button onClick={handleStartOver}>
-                    Start New Session
                   </Button>
                 </div>
               </div>
