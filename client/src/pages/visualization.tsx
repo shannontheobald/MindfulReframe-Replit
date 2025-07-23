@@ -51,10 +51,10 @@ export default function VisualizationPage() {
     mutationFn: async () => {
       return apiRequest(`/api/visualization/generate`, {
         method: 'POST',
-        body: JSON.stringify({
+        body: {
           reframingSessionId: parseInt(sessionId!),
           userId: parseInt(userId!)
-        })
+        }
       });
     },
     onSuccess: (data) => {
