@@ -355,6 +355,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Generate personalized visualization meditation
+  app.post("/api/visualization/generate", async (req, res) => {
+    try {
+      const { userId, intakeResponses, reframedBelief, specificGoal } = req.body;
+
+      if (!userId || !intakeResponses || !reframedBelief) {
+        return res.status(400).json({ error: "Missing required parameters" });
+      }
+
+      // Generate visualization using OpenAI
+      const visualization = await openaiService.generateVisualization({
+        userId,
+        intakeResponses,
+        reframedBelief,
+        specificGoal: specificGoal || null
+      });
+
+      res.json(visualization);
+
+    } catch (error: any) {
+      console.error("Error generating visualization:", error);
+      
+      if (error.message?.includes("Daily AI usage limit reached")) {
+        return res.status(429).json({ error: error.message });
+      }
+      
+      res.status(500).json({ error: "Failed to generate visualization" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

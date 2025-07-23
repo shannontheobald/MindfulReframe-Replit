@@ -340,11 +340,13 @@ export default function Reframe() {
   };
 
   const handleCreateVisualization = () => {
-    // Navigate to visualization page (to be implemented)
-    toast({
-      title: "Visualization Coming Soon",
-      description: "This feature will be available in the next update.",
-    });
+    // Navigate to visualization page with context
+    const reframedBelief = completionSummary?.finalReframe || session?.finalReframedThought;
+    if (reframedBelief) {
+      setLocation(`/visualization?sessionId=${reframingSessionId}&reframedThought=${encodeURIComponent(reframedBelief)}&userId=${userId}`);
+    } else {
+      setLocation(`/visualization?userId=${userId}`);
+    }
   };
 
   // Don't auto-start session - let user choose method first
