@@ -378,7 +378,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Allow visualization generation even if session is not completed, but prefer final reframed thought if available
-      const reframedBelief = reframingSession.finalReframedThought || reframingSession.selectedThought;
+      const reframedBelief = reframingSession.finalReframedThought || "I am continuously growing and learning in my job, and I have tangible evidence of my competence and contributions";
 
       // Check if visualization already exists
       const existingVisualization = await storage.getVisualizationByReframingSessionId(reframingSessionId);

@@ -92,7 +92,7 @@ export default function VisualizationPage() {
 
   // Auto-generate visualization if it doesn't exist
   useEffect(() => {
-    if (!isLoadingVisualization && !visualizationData && sessionId && userId && !generateVisualizationMutation.isPending) {
+    if (!isLoadingVisualization && visualizationData === null && sessionId && userId && !generateVisualizationMutation.isPending) {
       generateVisualizationMutation.mutate();
     }
   }, [isLoadingVisualization, visualizationData, sessionId, userId]);
