@@ -28,6 +28,7 @@ export default function Intake() {
   const [, setLocation] = useLocation();
   const [showSuccess, setShowSuccess] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [answers, setAnswers] = useState(["", "", "", "", ""]);
   const { toast } = useToast();
 
   const userId = 1; // For demo purposes, using user ID 1
@@ -50,34 +51,39 @@ export default function Intake() {
     }
   });
 
-  const form = useForm<IntakeFormData>({
-    resolver: zodResolver(intakeFormSchema),
-    defaultValues: {
-      userId,
-      question1: "",
-      question2: "",
-      question3: "",
-      question4: "",
-      question5: "",
-    },
-  });
-
-  // Update form when existing data is loaded
+  // Update answers when existing data is loaded
   useEffect(() => {
     if (existingIntake) {
-      form.reset({
-        userId,
-        question1: existingIntake.question1 || "",
-        question2: existingIntake.question2 || "",
-        question3: existingIntake.question3 || "",
-        question4: existingIntake.question4 || "",
-        question5: existingIntake.question5 || "",
-      });
+      setAnswers([
+        existingIntake.question1 || "",
+        existingIntake.question2 || "",
+        existingIntake.question3 || "",
+        existingIntake.question4 || "",
+        existingIntake.question5 || "",
+      ]);
     }
-  }, [existingIntake, form]);
+  }, [existingIntake]);
+
+  // Validation logic for completion
+  const isFormComplete = answers.every((answer) => answer.trim() !== "");
+
+  // Debug logging
+  useEffect(() => {
+    console.log("Answers:", answers);
+    console.log("isFormComplete:", isFormComplete);
+  }, [answers, isFormComplete]);
 
   const saveIntakeMutation = useMutation({
-    mutationFn: async (data: IntakeFormData) => {
+    mutationFn: async () => {
+      const data = {
+        userId,
+        question1: answers[0],
+        question2: answers[1],
+        question3: answers[2],
+        question4: answers[3],
+        question5: answers[4],
+      };
+      
       if (isEditing) {
         return apiRequest(`/api/intake/${userId}`, { method: "PUT", body: data });
       } else {
@@ -102,14 +108,18 @@ export default function Intake() {
     },
   });
 
-  const watchedValues = form.watch();
-  const filledCount = Object.values(watchedValues).filter(
-    (value) => typeof value === "string" && value.trim().length > 0
-  ).length - 1; // Subtract 1 for userId
+  const filledCount = answers.filter(answer => answer.trim().length > 0).length;
   const progress = (filledCount / 5) * 100;
 
-  const onSubmit = (data: IntakeFormData) => {
-    saveIntakeMutation.mutate(data);
+  const handleSubmit = async () => {
+    if (!isFormComplete) return;
+    saveIntakeMutation.mutate();
+  };
+
+  const updateAnswer = (index: number, value: string) => {
+    const updated = [...answers];
+    updated[index] = value;
+    setAnswers(updated);
   };
 
   const questions = [
@@ -205,47 +215,36 @@ export default function Intake() {
                 </p>
               </div>
 
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                  {questions.map((question, index) => (
-                    <FormField
-                      key={question.name}
-                      control={form.control}
-                      name={question.name}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-lg font-semibold text-charcoal">
-                            {question.label}
-                            <span className="text-red-400 ml-1">*</span>
-                          </FormLabel>
-                          <FormControl>
-                            <Textarea
-                              {...field}
-                              rows={4}
-                              placeholder={question.placeholder}
-                              className="w-full px-6 py-4 bg-white/80 border border-white/40 rounded-2xl focus:ring-4 focus:ring-primary/20 focus:border-primary/50 resize-none text-charcoal placeholder-warm-gray/60 transition-all duration-200"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+              <div className="space-y-8">
+                {questions.map((question, index) => (
+                  <div key={index}>
+                    <label className="text-lg font-semibold text-charcoal block mb-2">
+                      {question.label}
+                      <span className="text-red-400 ml-1">*</span>
+                    </label>
+                    <Textarea
+                      value={answers[index]}
+                      onChange={(e) => updateAnswer(index, e.target.value)}
+                      rows={4}
+                      placeholder={question.placeholder}
+                      className="w-full px-6 py-4 bg-white/80 border border-white/40 rounded-2xl focus:ring-4 focus:ring-primary/20 focus:border-primary/50 resize-none text-charcoal placeholder-warm-gray/60 transition-all duration-200"
                     />
-                  ))}
-
-                  <div className="text-center pt-8">
-                    <Button
-                      type="submit"
-                      disabled={saveIntakeMutation.isPending || filledCount < 5}
-                      className="w-full sm:w-auto px-12 py-4 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-full hover:shadow-lg hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {saveIntakeMutation.isPending ? "Saving..." : (isEditing ? "Update Profile" : "Complete Setup")}
-                    </Button>
-                    <p className="text-sm text-warm-gray mt-4">
-                      All fields are required to personalize your experience
-                    </p>
                   </div>
-                </form>
-              </Form>
+                ))}
+
+                <div className="text-center pt-8">
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={!isFormComplete || saveIntakeMutation.isPending}
+                    className="w-full sm:w-auto px-12 py-4 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-full hover:shadow-lg hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {saveIntakeMutation.isPending ? "Saving..." : (isEditing ? "Update Profile" : "Complete Setup")}
+                  </Button>
+                  <p className="text-sm text-warm-gray mt-4">
+                    All fields are required to personalize your experience ({filledCount}/5 completed)
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>
