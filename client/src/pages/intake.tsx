@@ -79,15 +79,11 @@ export default function Intake() {
   const saveIntakeMutation = useMutation({
     mutationFn: async (data: IntakeFormData) => {
       if (isEditing) {
-        return apiRequest(`/api/intake/${userId}`, {
-          method: 'PUT',
-          body: data
-        });
+        const response = await apiRequest("PUT", `/api/intake/${userId}`, data);
+        return response.json();
       } else {
-        return apiRequest("/api/intake", {
-          method: 'POST',
-          body: data
-        });
+        const response = await apiRequest("POST", "/api/intake", data);
+        return response.json();
       }
     },
     onSuccess: () => {
