@@ -39,6 +39,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update intake response
+  app.put("/api/intake/:userId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+
+      const validatedData = insertIntakeResponseSchema.parse(req.body);
+      const updatedResponse = await storage.updateIntakeResponse(userId, validatedData);
+      
+      if (!updatedResponse) {
+        return res.status(404).json({ message: "Intake response not found" });
+      }
+      
+      res.json(updatedResponse);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  });
+
   // Get intake response by user ID
   app.get("/api/intake/:userId", async (req, res) => {
     try {

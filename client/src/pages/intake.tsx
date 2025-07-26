@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -27,12 +27,33 @@ type IntakeFormData = z.infer<typeof intakeFormSchema>;
 export default function Intake() {
   const [, setLocation] = useLocation();
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const { toast } = useToast();
+
+  const userId = 1; // For demo purposes, using user ID 1
+
+  // Fetch existing intake data
+  const { data: existingIntake, isLoading } = useQuery({
+    queryKey: ['/api/intake', userId],
+    queryFn: async () => {
+      try {
+        const response = await fetch(`/api/intake/${userId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setIsEditing(true);
+          return data;
+        }
+        return null;
+      } catch (error) {
+        return null;
+      }
+    }
+  });
 
   const form = useForm<IntakeFormData>({
     resolver: zodResolver(intakeFormSchema),
     defaultValues: {
-      userId: 1, // For demo purposes, using user ID 1
+      userId,
       question1: "",
       question2: "",
       question3: "",
@@ -41,16 +62,41 @@ export default function Intake() {
     },
   });
 
-  const createIntakeMutation = useMutation({
+  // Update form when existing data is loaded
+  useEffect(() => {
+    if (existingIntake) {
+      form.reset({
+        userId,
+        question1: existingIntake.question1 || "",
+        question2: existingIntake.question2 || "",
+        question3: existingIntake.question3 || "",
+        question4: existingIntake.question4 || "",
+        question5: existingIntake.question5 || "",
+      });
+    }
+  }, [existingIntake, form]);
+
+  const saveIntakeMutation = useMutation({
     mutationFn: async (data: IntakeFormData) => {
-      const response = await apiRequest("POST", "/api/intake", data);
-      return response.json();
+      if (isEditing) {
+        return apiRequest(`/api/intake/${userId}`, {
+          method: 'PUT',
+          body: data
+        });
+      } else {
+        return apiRequest("/api/intake", {
+          method: 'POST',
+          body: data
+        });
+      }
     },
     onSuccess: () => {
       setShowSuccess(true);
       toast({
         title: "Success!",
-        description: "Your responses have been saved. You're ready to start your journey.",
+        description: isEditing 
+          ? "Your profile has been updated successfully."
+          : "Your responses have been saved. You're ready to start your journey.",
       });
     },
     onError: (error) => {
@@ -69,7 +115,7 @@ export default function Intake() {
   const progress = (filledCount / 5) * 100;
 
   const onSubmit = (data: IntakeFormData) => {
-    createIntakeMutation.mutate(data);
+    saveIntakeMutation.mutate(data);
   };
 
   const questions = [
@@ -155,10 +201,13 @@ export default function Intake() {
             <CardContent className="p-8 md:p-12">
               <div className="text-center mb-8">
                 <h2 className="text-3xl md:text-4xl font-bold text-charcoal mb-4">
-                  Let's get to know you
+                  {isEditing ? "Edit Your Profile" : "Let's get to know you"}
                 </h2>
                 <p className="text-warm-gray text-lg leading-relaxed">
-                  These questions help us personalize your journey. Take your time and be honest—there are no wrong answers.
+                  {isEditing 
+                    ? "Update your responses to keep your experience personalized and relevant to your current goals."
+                    : "These questions help us personalize your journey. Take your time and be honest—there are no wrong answers."
+                  }
                 </p>
               </div>
 
@@ -192,10 +241,10 @@ export default function Intake() {
                   <div className="text-center pt-8">
                     <Button
                       type="submit"
-                      disabled={createIntakeMutation.isPending || filledCount < 5}
+                      disabled={saveIntakeMutation.isPending || filledCount < 5}
                       className="w-full sm:w-auto px-12 py-4 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-full hover:shadow-lg hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {createIntakeMutation.isPending ? "Saving..." : "Complete Setup"}
+                      {saveIntakeMutation.isPending ? "Saving..." : (isEditing ? "Update Profile" : "Complete Setup")}
                     </Button>
                     <p className="text-sm text-warm-gray mt-4">
                       All fields are required to personalize your experience

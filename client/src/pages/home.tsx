@@ -56,6 +56,14 @@ export default function Home() {
                 View Past Sessions
               </Button>
             </Link>
+            <Link href="/intake">
+              <Button
+                variant="outline"
+                className="w-full sm:w-auto px-8 py-4 glass-effect text-charcoal font-semibold rounded-full hover:bg-white hover:shadow-md transition-all duration-200"
+              >
+                Edit Profile
+              </Button>
+            </Link>
           </div>
 
           {/* Feature Cards */}

@@ -11,6 +11,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   createIntakeResponse(response: InsertIntakeResponse): Promise<IntakeResponse>;
   getIntakeResponseByUserId(userId: number): Promise<IntakeResponse | undefined>;
+  updateIntakeResponse(userId: number, updates: InsertIntakeResponse): Promise<IntakeResponse | undefined>;
   createJournalSession(session: InsertJournalSession): Promise<JournalSession>;
   getJournalSessionsByUserId(userId: number): Promise<JournalSession[]>;
   getJournalSession(id: number): Promise<JournalSession | undefined>;
@@ -73,6 +74,14 @@ export class DatabaseStorage implements IStorage {
 
   async getIntakeResponseByUserId(userId: number): Promise<IntakeResponse | undefined> {
     const result = await db.select().from(intakeResponses).where(eq(intakeResponses.userId, userId)).limit(1);
+    return result[0];
+  }
+
+  async updateIntakeResponse(userId: number, updates: InsertIntakeResponse): Promise<IntakeResponse | undefined> {
+    const result = await db.update(intakeResponses)
+      .set(updates)
+      .where(eq(intakeResponses.userId, userId))
+      .returning();
     return result[0];
   }
 
@@ -189,6 +198,27 @@ export class MemStorage implements IStorage {
     return Array.from(this.intakeResponses.values()).find(
       (response) => response.userId === userId,
     );
+  }
+
+  async updateIntakeResponse(userId: number, updates: InsertIntakeResponse): Promise<IntakeResponse | undefined> {
+    const existingResponse = Array.from(this.intakeResponses.values()).find(
+      (response) => response.userId === userId,
+    );
+    
+    if (!existingResponse) {
+      return undefined;
+    }
+
+    const updatedResponse: IntakeResponse = {
+      ...existingResponse,
+      ...updates,
+      userId: existingResponse.userId, // Keep original userId
+      id: existingResponse.id, // Keep original id
+      createdAt: existingResponse.createdAt, // Keep original creation date
+    };
+    
+    this.intakeResponses.set(existingResponse.id, updatedResponse);
+    return updatedResponse;
   }
 
   async createJournalSession(insertSession: InsertJournalSession): Promise<JournalSession> {
