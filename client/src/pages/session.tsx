@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { useSession } from "@/context/SessionContext";
@@ -55,6 +56,28 @@ export default function Session() {
     },
   });
 
+  const JOURNAL_STORAGE_KEY = 'journal_entry';
+
+  // Load saved journal entry from localStorage
+  useEffect(() => {
+    const savedJournalEntry = localStorage.getItem(JOURNAL_STORAGE_KEY);
+    if (savedJournalEntry && savedJournalEntry.trim() !== "") {
+      form.setValue('journalEntry', savedJournalEntry);
+      console.log("Loaded saved journal entry from localStorage");
+    }
+  }, [form]);
+
+  // Save journal entry to localStorage as user types
+  const saveJournalToStorage = (value: string) => {
+    localStorage.setItem(JOURNAL_STORAGE_KEY, value);
+  };
+
+  // Clear journal storage
+  const clearJournalStorage = () => {
+    localStorage.removeItem(JOURNAL_STORAGE_KEY);
+    console.log("Cleared saved journal entry from localStorage");
+  };
+
   const analyzeMutation = useMutation({
     mutationFn: async (data: JournalFormData) => {
       return apiRequest("/api/sessions/analyze", {
@@ -64,6 +87,8 @@ export default function Session() {
     },
     onSuccess: (result) => {
       setAnalysisResult(result);
+      // Clear journal storage after successful analysis
+      clearJournalStorage();
       toast({
         title: "Analysis Complete",
         description: "I've identified some thought patterns we can work on together.",
@@ -341,6 +366,10 @@ export default function Session() {
                         <FormControl>
                           <Textarea
                             {...field}
+                            onChange={(e) => {
+                              field.onChange(e); // Update form state
+                              saveJournalToStorage(e.target.value); // Save to localStorage
+                            }}
                             rows={12}
                             placeholder="Start writing about what's been on your mind lately. Share your thoughts, worries, frustrations, or anything that feels heavy. This is a safe space to express yourself honestly..."
                             className="w-full px-6 py-4 bg-white/80 border border-white/40 rounded-2xl focus:ring-4 focus:ring-primary/20 focus:border-primary/50 resize-none text-charcoal placeholder-warm-gray/60 transition-all duration-200"

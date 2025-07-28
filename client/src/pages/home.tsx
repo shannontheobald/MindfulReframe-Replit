@@ -1,9 +1,10 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Brain, Heart, Eye, User } from "lucide-react";
 
 export default function Home() {
+  const [, setLocation] = useLocation();
   return (
     <div className="min-h-screen flex flex-col">
       {/* Navigation Header */}
@@ -43,11 +44,24 @@ export default function Home() {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-            <Link href="/session">
-              <Button className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-full hover:shadow-lg hover:scale-105 transition-all duration-200">
-                Start a New Session
-              </Button>
-            </Link>
+            <Button 
+              onClick={() => {
+                // Clear any stored form data when starting new session
+                const intakeKeys = [
+                  'intake_question1',
+                  'intake_question2', 
+                  'intake_question3',
+                  'intake_question4',
+                  'intake_question5'
+                ];
+                const journalKeys = ['journal_entry'];
+                [...intakeKeys, ...journalKeys].forEach(key => localStorage.removeItem(key));
+                setLocation('/session');
+              }}
+              className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-full hover:shadow-lg hover:scale-105 transition-all duration-200"
+            >
+              Start a New Session
+            </Button>
             <Link href="/past-sessions">
               <Button
                 variant="outline"

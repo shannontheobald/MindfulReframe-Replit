@@ -6,8 +6,7 @@ const openai = new OpenAI({
 });
 
 export interface VisualizationRequest {
-  originalThought: string;
-  reframedBelief: string;
+  thoughtReframingChat: string; // Reference the whole chat for thought reframing
   distortion: string;
   intakeContext: {
     goals: string;
@@ -51,8 +50,21 @@ export async function generateVisualization(
     ) || [];
     details.people = Array.from(new Set(peopleMatches.slice(0, 3))); // Limit to 3 names
     
-    // Extract activities and interests
-    const activityWords = ['art', 'music', 'writing', 'painting', 'photography', 'hiking', 'travel', 'cooking', 'reading', 'dancing', 'theater', 'film', 'business', 'startup', 'climate', 'environment', 'teaching', 'speaking', 'presenting'];
+    // Dynamically extract activities and interests from user's inputs
+    const extractActivities = (text: string): string[] => {
+        const regex = /\b(?:\w{4,})\b/g; // Match words with 4 or more letters
+        const activities = text.match(regex) || [];
+        return activities.filter((activity, index) => activities.indexOf(activity) === index); // Remove duplicates
+    };
+    
+    // Merge extracted activities from all intake contexts
+    const activitiesFromIntake = [
+        ...extractActivities(intakeContext.goals),
+        ...extractActivities(intakeContext.dreams),
+        ...extractActivities(intakeContext.currentChallenges),
+        ...extractActivities(intakeContext.selfCareActivities)
+    ];
+    details.activities = Array.from(new Set(activitiesFromIntake));
     details.activities = activityWords.filter(activity => text.toLowerCase().includes(activity));
     
     return details;
@@ -70,8 +82,7 @@ export async function generateVisualization(
 You are creating an immersive, deeply personalized visualization meditation that reads like guided poetry. This is not generic—it should feel like it was written specifically for this person using their own words, dreams, and passions.
 
 USER'S PERSONAL CONTEXT:
-- Original limiting belief: "${originalThought}"
-- New empowering belief: "${reframedBelief}"
+- Thought reframing chat: "${request.thoughtReframingChat}"  
 - Personal goals: "${intakeContext.goals}"
 - Dreams & aspirations: "${intakeContext.dreams}"
 - Current challenges: "${intakeContext.currentChallenges}"
