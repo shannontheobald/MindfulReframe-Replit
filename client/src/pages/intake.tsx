@@ -33,30 +33,7 @@ export default function Intake() {
 
   const userId = 1; // For demo purposes, using user ID 1
 
-  // Storage keys for localStorage
-  const STORAGE_KEYS = [
-    'intake_question1',
-    'intake_question2', 
-    'intake_question3',
-    'intake_question4',
-    'intake_question5'
-  ];
-
-  // Load saved answers from localStorage on component mount
-  useEffect(() => {
-    const savedAnswers = STORAGE_KEYS.map(key => localStorage.getItem(key) || "");
-    const hasAnyAnswers = savedAnswers.some(answer => answer.trim() !== "");
-    
-    if (hasAnyAnswers) {
-      setAnswers(savedAnswers);
-      console.log("Loaded saved answers from localStorage:", savedAnswers);
-    }
-  }, []);
-
-  // Save answers to localStorage as user types
-  const saveToStorage = (index: number, value: string) => {
-    localStorage.setItem(STORAGE_KEYS[index], value);
-  };
+  // Profile data should NOT use localStorage - it's permanent user data that goes to database
 
   // Fetch existing intake data
   const { data: existingIntake, isLoading } = useQuery({
@@ -117,8 +94,7 @@ export default function Intake() {
     },
     onSuccess: () => {
       setShowSuccess(true);
-      // Clear localStorage after successful submission
-      clearStoredAnswers();
+      // Profile data stays in database - no localStorage to clear
       toast({
         title: "Success!", 
         description: isEditing 
@@ -147,16 +123,7 @@ export default function Intake() {
     const updated = [...answers];
     updated[index] = value;
     setAnswers(updated);
-    
-    // Save to localStorage as user types
-    saveToStorage(index, value);
-  };
-
-  // Clear all saved data for new session
-  const clearStoredAnswers = () => {
-    STORAGE_KEYS.forEach(key => localStorage.removeItem(key));
-    setAnswers(["", "", "", "", ""]);
-    console.log("Cleared all saved answers from localStorage");
+    // Profile data is NOT saved to localStorage - only to database on submit
   };
 
   const questions = [

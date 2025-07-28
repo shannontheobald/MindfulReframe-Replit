@@ -46,16 +46,17 @@ export default function Home() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
             <Button 
               onClick={() => {
-                // Clear any stored form data when starting new session
-                const intakeKeys = [
-                  'intake_question1',
-                  'intake_question2', 
-                  'intake_question3',
-                  'intake_question4',
-                  'intake_question5'
+                // Clear session-level localStorage (journal, reframing chat, analysis)
+                const sessionKeys = [
+                  'journal_entry',
+                  'analysis_summary', 
+                  'selected_thought',
+                  'selected_distortion',
+                  'reframing_method',
+                  'reframing_chat_history'
                 ];
-                const journalKeys = ['journal_entry'];
-                [...intakeKeys, ...journalKeys].forEach(key => localStorage.removeItem(key));
+                sessionKeys.forEach(key => localStorage.removeItem(key));
+                console.log("Cleared session data for new session");
                 setLocation('/session');
               }}
               className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-full hover:shadow-lg hover:scale-105 transition-all duration-200"

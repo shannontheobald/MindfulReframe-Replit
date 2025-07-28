@@ -14,6 +14,15 @@ import { ArrowLeft, MessageCircle, CheckCircle, Loader2, Sparkles } from "lucide
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
+// localStorage keys for session data
+const SESSION_STORAGE_KEYS = {
+  SELECTED_THOUGHT: 'selected_thought',
+  SELECTED_DISTORTION: 'selected_distortion', 
+  REFRAMING_METHOD: 'reframing_method',
+  CHAT_HISTORY: 'reframing_chat_history',
+  CURRENT_MESSAGE: 'current_reframe_message'
+};
+
 const messageFormSchema = z.object({
   message: z.string().min(1, "Please enter a message"),
 });
