@@ -323,25 +323,35 @@ export default function VisualizationPage() {
             </Card>
 
             {/* Visualization Text */}
-            <Card>
+            <Card className="bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-gray-800/50 dark:to-gray-700/50 border-0 shadow-lg">
               <CardHeader>
-                <CardTitle className="text-xl">Your Meditation</CardTitle>
-                <CardDescription>
-                  Take a comfortable position and allow yourself to be guided through this personalized visualization
+                <CardTitle className="text-xl bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                  Your Personalized Meditation Journey
+                </CardTitle>
+                <CardDescription className="text-warm-gray">
+                  Take a comfortable position and allow yourself to be guided through this meditation crafted from your own dreams and aspirations
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="prose prose-gray dark:prose-invert max-w-none">
-                  {visualizationParagraphs.map((paragraph, index) => (
-                    <p 
-                      key={index}
-                      className={`mb-4 leading-relaxed text-lg ${
-                        currentParagraph === index ? 'bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border-l-4 border-blue-500' : ''
-                      }`}
-                    >
-                      {paragraph}
-                    </p>
-                  ))}
+                <div className="meditation-block">
+                  <div className="prose prose-gray dark:prose-invert max-w-none">
+                    <div className="space-y-6">
+                      {visualizationParagraphs.map((paragraph, index) => (
+                        <div
+                          key={index}
+                          className={`p-6 rounded-2xl transition-all duration-700 ${
+                            currentParagraph === index 
+                              ? 'bg-gradient-to-r from-primary/10 to-secondary/10 border-l-4 border-primary shadow-lg transform scale-[1.02]' 
+                              : 'hover:bg-gray-50/30 hover:shadow-sm dark:hover:bg-gray-800/30'
+                          }`}
+                        >
+                          <div className="text-lg leading-8 font-light tracking-wide text-warm-gray dark:text-gray-300">
+                            {paragraph}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
